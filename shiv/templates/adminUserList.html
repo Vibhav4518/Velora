@@ -1,0 +1,551 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div class="admin-users-page">
+
+  <div class="admin-users-header">
+    <div>
+      <h3>Admin Users</h3>
+      <p>Manage staff accounts, assigned roles, and permissions</p>
+    </div>
+
+    <button
+  type="button"
+  class="add-admin-btn border-0"
+  data-bs-toggle="modal"
+  data-bs-target="#addAdminUserModal"
+>
+  <i class="bi bi-plus-circle me-2"></i>
+  Add Admin User
+</button>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="user-stat-card">
+        <div>
+          <h5>Total Admins</h5>
+          <h3>{{ total_admins }}</h3>
+        </div>
+        <i class="bi bi-people-fill bg-blue"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="user-stat-card">
+        <div>
+          <h5>Active</h5>
+          <h3>{{ active_admins }}</h3>
+        </div>
+        <i class="bi bi-person-check bg-green"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="user-stat-card">
+        <div>
+          <h5>Inactive</h5>
+          <h3>{{ inactive_admins }}</h3>
+        </div>
+        <i class="bi bi-person-x bg-red"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="user-stat-card">
+        <div>
+          <h5>Total Roles</h5>
+          <h3>{{ total_roles }}</h3>
+        </div>
+        <i class="bi bi-shield-lock bg-purple"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-user-table-card">
+
+    <div class="table-top">
+      <h4>Admin User List</h4>
+
+      <form method="GET" class="search-box">
+        <input
+          type="text"
+          name="q"
+          class="form-control"
+          placeholder="Search name, email, role..."
+          value="{{ request.GET.q }}"
+        />
+        <button type="submit">
+          <i class="bi bi-search"></i>
+        </button>
+      </form>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle admin-user-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Mobile</th>
+            <th>Role</th>
+            <th>Permissions</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>
+              <div class="user-info-box">
+                {% if user.profile_image %}
+                  <img src="{{ user.profile_image.url }}" alt="{{ user.username }}">
+                {% else %}
+                  <img src="{% static 'images/default-user.png' %}" alt="Default User">
+                {% endif %}
+
+                <div>
+                  <h6>
+                    {% if user.first_name %}
+                      {{ user.first_name }} {{ user.last_name }}
+                    {% else %}
+                      {{ user.username }}
+                    {% endif %}
+                  </h6>
+                  <small>@{{ user.username }}</small>
+                </div>
+              </div>
+            </td>
+
+            <td>{{ user.email|default:"No Email" }}</td>
+            <td>{{ user.mobile_no|default:"No Mobile" }}</td>
+
+            <td>
+              {% if user.role %}
+                <span class="role-pill">{{ user.role.role_name }}</span>
+              {% else %}
+                <span class="role-pill gray">No Role</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if user.role %}
+                <button
+                  type="button"
+                  class="permission-btn"
+                  data-bs-toggle="modal"
+                  data-bs-target="#permissionModal{{ user.id }}"
+                >
+                  {{ user.role.permissions.count }} Permissions
+                </button>
+              {% else %}
+                <span class="text-muted">No Permissions</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if user.is_active %}
+                <span class="status active">Active</span>
+              {% else %}
+                <span class="status inactive">Inactive</span>
+              {% endif %}
+            </td>
+
+            <td>{{ user.date_joined|date:"d M Y" }}</td>
+
+           <td class="text-end">
+  <div class="dropdown">
+    <button class="action-dropdown-btn" data-bs-toggle="dropdown">
+      <i class="bi bi-three-dots-vertical"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
+      <li>
+  <button
+    class="dropdown-item"
+    data-bs-toggle="modal"
+    data-bs-target="#viewAdmin{{ user.id }}">
+    <i class="bi bi-eye me-2"></i> View Details
+  </button>
+</li>
+      <li>
+        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editUser{{ user.id }}">
+          <i class="bi bi-pencil-square me-2"></i> Edit User
+        </button>
+      </li>
+
+      <li>
+        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#changeRole{{ user.id }}">
+          <i class="bi bi-shield-check me-2"></i> Change Role
+        </button>
+      </li>
+
+      <li>
+        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#resetPassword{{ user.id }}">
+          <i class="bi bi-key me-2"></i> Reset Password
+        </button>
+      </li>
+
+      <li><hr class="dropdown-divider"></li>
+
+      <li>
+        <a
+  href="{% url 'delete_admin_user' user.id %}"
+  class="dropdown-item text-danger delete-user-btn"
+>
+  <i class="bi bi-trash me-2"></i> Delete User
+</a>
+      </li>
+    </ul>
+  </div>
+</td>
+          </tr>
+
+<!-- Admin Details< -->
+<div class="modal fade" id="viewAdmin{{ user.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Admin Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+
+        {% if user.profile_image %}
+        <img src="{{ user.profile_image.url }}" class="modal-user-img">
+        {% else %}
+        <img src="{% static 'images/default-user.png' %}" class="modal-user-img">
+        {% endif %}
+
+        <h4 class="mt-3">
+          {% if user.first_name %}
+            {{ user.first_name }} {{ user.last_name }}
+          {% else %}
+            {{ user.username }}
+          {% endif %}
+        </h4>
+
+        <p class="role-pill d-inline-block">
+          {% if user.role %}
+            {{ user.role.role_name }}
+          {% else %}
+            No Role
+          {% endif %}
+        </p>
+
+        <div class="admin-detail-list">
+          <p><b>Username:</b> {{ user.username }}</p>
+          <p><b>Email:</b> {{ user.email|default:"No Email" }}</p>
+          <p><b>Mobile:</b> {{ user.mobile_no|default:"No Mobile" }}</p>
+          <p><b>Status:</b> {% if user.is_active %} Active {% else %} Inactive {% endif %}</p>
+          <p><b>Joined:</b> {{ user.date_joined|date:"d M Y" }}</p>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUser{{ user.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="confirm-form" action="{% url 'edit_admin_user' user.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">First Name</label>
+              <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Last Name</label>
+              <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="username" value="{{ user.username }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" value="{{ user.email }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Mobile</label>
+              <input type="text" name="mobile_no" value="{{ user.mobile_no }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+  <label class="form-label">Profile Image</label>
+
+  <div class="image-upload-box">
+    <img
+      src=""
+      class="image-preview"
+      alt="Preview"
+    >
+
+    <input
+      type="file"
+      name="profile_image"
+      class="form-control product-input image-input"
+      accept="image/*"
+    >
+  </div>
+</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="product-submit-btn">Update User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Change Role Modal -->
+<div class="modal fade" id="changeRole{{ user.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Change Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" class="confirm-form" action="{% url 'change_admin_role' user.id %}">
+
+    {% csrf_token %}
+
+  <div class="modal-body">
+
+    <div class="mb-3">
+        <label class="form-label fw-semibold mb-2">
+            Select Role
+        </label>
+
+       <select name="role" class="form-select modal-select" required>
+  <option value="">Select Role</option>
+
+  {% for role in roles %}
+  <option value="{{ role.id }}" {% if user.role and user.role.id == role.id %}selected{% endif %}>
+    {{ role.role_name }}
+  </option>
+  {% endfor %}
+</select>
+     </div>
+
+    </div>
+    <div class="modal-footer">
+
+        <button type="button"
+                class="btn btn-light"
+                data-bs-dismiss="modal">
+            Cancel
+        </button>
+
+        <button type="submit"
+                class="product-submit-btn">
+            <i class="bi bi-shield-check me-2"></i>
+            Update Role
+        </button>
+
+    </div>
+
+</form>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPassword{{ user.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Reset Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" class="confirm-form" action="{% url 'reset_admin_password' user.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">New Password</label>
+          <input type="password" name="password" class="form-control product-input mb-3" required>
+
+          <label class="form-label">Confirm Password</label>
+          <input type="password" name="confirm_password" class="form-control product-input" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="product-submit-btn">Reset Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+          {% if user.role %}
+          <div class="modal fade" id="permissionModal{{ user.id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content permission-modal">
+
+                <div class="modal-header">
+                  <h5 class="modal-title">
+                    {{ user.role.role_name }} Permissions
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                  {% for permission in user.role.permissions.all %}
+                    <span class="permission-chip">
+                      <i class="bi bi-check-circle"></i>
+                      {{ permission.permission_name }}
+                    </span>
+                  {% empty %}
+                    <p class="text-muted mb-0">No permissions assigned to this role.</p>
+                  {% endfor %}
+                </div>
+
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              No admin users found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- Add Admin User Modal -->
+<div class="modal fade" id="addAdminUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Admin User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="confirm-form" action="{% url 'add_admin_user' %}">
+        {% csrf_token %}
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">First Name</label>
+              <input type="text" name="first_name" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Last Name</label>
+              <input type="text" name="last_name" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="username" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Mobile Number</label>
+              <input type="text" name="mobile_no" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Role</label>
+              <select name="role" class="form-select modal-select" required>
+                <option value="">Select Role</option>
+                {% for role in roles %}
+                  {% if role.role_name != "User" %}
+                  <option value="{{ role.id }}">{{ role.role_name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Password</label>
+              <input type="password" name="password" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" name="confirm_password" class="form-control product-input" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Status</label>
+              <select name="is_active" class="form-select modal-select">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+  <label class="form-label">Profile Image</label>
+
+  <div class="image-upload-box">
+    <img
+      src=""
+      class="image-preview"
+      alt="Preview"
+    >
+
+    <input
+      type="file"
+      name="profile_image"
+      class="form-control product-input image-input"
+      accept="image/*"
+    >
+  </div>
+</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+
+          <button type="submit" class="product-submit-btn">
+            <i class="bi bi-plus-circle me-2"></i>
+            Save Admin
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

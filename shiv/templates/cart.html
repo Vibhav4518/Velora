@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="cart-page py-5">
+  <div class="container">
+
+    <div class="cart-header mb-4">
+      <div>
+        <h2>Shopping Cart</h2>
+        <p>Review your selected items before checkout</p>
+      </div>
+
+      <a href="{% url 'shop_page' %}" class="continue-btn">
+    <i class="bi bi-arrow-left me-2"></i>
+    Continue Shopping
+</a>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-lg-8">
+        <div class="cart-list-card">
+
+          {% for item in cart_items %}
+          <div class="cart-item-card">
+
+            <div class="cart-product-info">
+              {% if item.product.images.first %}
+              <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.product_name }}">
+              {% else %}
+              <img src="{% static 'images/default-product.png' %}" alt="Product">
+              {% endif %}
+
+              <div>
+                <h5>{{ item.product.product_name }}</h5>
+                <p>{{ item.product.category.category_name }}</p>
+                <strong>₹{{ item.product.price }}</strong>
+              </div>
+            </div>
+
+            <div class="cart-actions">
+              <div class="cart-qty-box">
+                <button type="button">-</button>
+                <input type="text" value="{{ item.quantity }}" readonly>
+                <button type="button">+</button>
+              </div>
+
+              <h5>₹{{ item.subtotal }}</h5>
+
+              <a href="{% url 'remove_cart' item.product.id %}" class="cart-remove-btn">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+
+          </div>
+          {% empty %}
+          <div class="empty-cart">
+            <i class="bi bi-cart-x"></i>
+            <h4>Your cart is empty</h4>
+            <p>Add products to your cart and they will appear here.</p>
+            <a href="{% url 'shop_page' %}" class="btn btn-primary rounded-pill px-4">
+              Shop Now
+            </a>
+          </div>
+          {% endfor %}
+
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="cart-summary-card">
+          <h4>Order Summary</h4>
+
+          <div class="summary-line">
+            <span>Subtotal</span>
+            <strong>₹{{ subtotal|default:0 }}</strong>
+          </div>
+
+          <div class="summary-line">
+            <span>Shipping</span>
+            <strong>₹{{ shipping|default:0 }}</strong>
+          </div>
+
+          <div class="summary-line">
+            <span>Discount</span>
+            <strong class="text-success">- ₹{{ discount|default:0 }}</strong>
+          </div>
+
+          <hr>
+
+          <div class="summary-total">
+            <span>Total</span>
+            <strong>₹{{ total|default:0 }}</strong>
+          </div>
+
+          <a href="{% url 'checkout' %}" class="checkout-main-btn">
+            Proceed To Checkout
+            <i class="bi bi-arrow-right ms-2"></i>
+          </a>
+
+          <div class="cart-secure-note">
+            <i class="bi bi-shield-check"></i>
+            Secure checkout powered by Velora
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}

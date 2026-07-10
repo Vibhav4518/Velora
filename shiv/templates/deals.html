@@ -1,0 +1,164 @@
+
+ {% extends "base.html" %} 
+
+ {% block content %}
+ 
+  <!-- ================================= -->
+<!-- Deals Section -->
+<!-- ================================= -->
+
+<section class="deals py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Hot Deals</h2>
+
+      <p class="text-muted">Grab the best offers before they're gone!</p>
+    </div>
+
+    <!-- Deal Banner -->
+
+    <div class="deal-banner">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h2 class="fw-bold">Flash Sale</h2>
+
+          <h4>Up To 70% OFF</h4>
+
+          <p>Limited-time offers on premium collections.</p>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="countdown">
+            <div>
+              <span id="days">00</span>
+              <small>Days</small>
+            </div>
+
+            <div>
+              <span id="hours">00</span>
+              <small>Hours</small>
+            </div>
+
+            <div>
+              <span id="minutes">00</span>
+              <small>Minutes</small>
+            </div>
+
+            <div>
+              <span id="seconds">00</span>
+              <small>Seconds</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products -->
+
+    <div class="row mt-5 g-4">
+      <!-- Product -->
+
+      <div class="col-lg-3 col-md-6">
+        <div class="card deal-card">
+          <span class="badge bg-danger sale-badge"> -50% </span>
+
+          <img
+            src="https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+            class="card-img-top"
+          />
+
+          <div class="card-body">
+            <h5>Sneakers</h5>
+
+            <p>
+              <del>₹5,999</del>
+
+              <span class="text-danger fw-bold"> ₹2,999 </span>
+            </p>
+
+            <button class="btn btn-primary w-100">Add To Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product -->
+
+      <div class="col-lg-3 col-md-6">
+        <div class="card deal-card">
+          <span class="badge bg-danger sale-badge"> -40% </span>
+
+          <img
+            src="https://images.unsplash.com/photo-1523275335684-37898b6baf30"
+            class="card-img-top"
+          />
+
+          <div class="card-body">
+            <h5>Smart Watch</h5>
+
+            <p>
+              <del>₹8,999</del>
+
+              <span class="text-danger fw-bold"> ₹5,399 </span>
+            </p>
+
+            <button class="btn btn-primary w-100">Add To Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product -->
+
+      <div class="col-lg-3 col-md-6">
+        <div class="card deal-card">
+          <span class="badge bg-danger sale-badge"> -35% </span>
+
+          <img
+            src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+            class="card-img-top"
+          />
+
+          <div class="card-body">
+            <h5>Headphones</h5>
+
+            <p>
+              <del>₹7,999</del>
+
+              <span class="text-danger fw-bold"> ₹5,199 </span>
+            </p>
+
+            <button class="btn btn-primary w-100">Add To Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product -->
+
+      <div class="col-lg-3 col-md-6">
+        <div class="card deal-card">
+          <span class="badge bg-danger sale-badge"> -25% </span>
+
+          <img
+            src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa"
+            class="card-img-top"
+          />
+
+          <div class="card-body">
+            <h5>Leather Bag</h5>
+
+            <p>
+              <del>₹4,999</del>
+
+              <span class="text-danger fw-bold"> ₹3,749 </span>
+            </p>
+
+            <button class="btn btn-primary w-100">Add To Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+ {% endblock %}

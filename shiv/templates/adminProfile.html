@@ -1,0 +1,139 @@
+{% extends "adminLayout.html" %} {% load static %} {% block admincontent %}
+
+<div class="profile-page">
+  <div class="profile-header">
+    <div>
+      <h3>Admin Profile</h3>
+      <p>Manage your personal details and profile image</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Profile Card -->
+    <div class="col-lg-4">
+      <div class="profile-card text-center">
+        {% if request.user.profile_image %}
+        <img
+          src="{{ request.user.profile_image.url }}"
+          class="profile-img"
+          alt="Profile Image"
+        />
+        {% else %}
+        <img
+          src="{% static 'images/default-user.png' %}"
+          class="profile-img"
+          alt="Default Image"
+        />
+        {% endif %}
+
+        <h4>
+          {% if request.user.first_name %} {{ request.user.first_name }} {{ request.user.last_name }} {% else %} {{ request.user.username }} {% endif %}
+        </h4>
+
+        <p class="role-badge">
+          {% if request.user.role %} {{ request.user.role.role_name }} {% else %} Administrator {% endif %}
+        </p>
+
+        <div class="profile-info">
+          <p>
+            <i class="bi bi-envelope"></i> {{ request.user.email|default:"No Email Added" }}
+          </p>
+          <p>
+            <i class="bi bi-phone"></i> {{ request.user.mobile_no|default:"No Mobile Added" }}
+          </p>
+          <p><i class="bi bi-person"></i> {{ request.user.username }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Profile Form -->
+    <div class="col-lg-8">
+      <div class="edit-profile-card">
+        <h4 class="mb-4">Edit Profile</h4>
+
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>First Name</label>
+              <input
+                type="text"
+                name="first_name"
+                class="form-control custom-input"
+                value="{{ request.user.first_name }}"
+              />
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Last Name</label>
+              <input
+                type="text"
+                name="last_name"
+                class="form-control custom-input"
+                value="{{ request.user.last_name }}"
+              />
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Username</label>
+              <input
+                type="text"
+                name="username"
+                class="form-control custom-input"
+                value="{{ request.user.username }}"
+              />
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                class="form-control custom-input"
+                value="{{ request.user.email }}"
+              />
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Mobile Number</label>
+              <input
+                type="text"
+                name="mobile_no"
+                class="form-control custom-input"
+                value="{{ request.user.mobile_no }}"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold mb-2"> Profile Image </label>
+
+              <div class="image-upload-box">
+                <img
+                  id="imagePreview"
+                  class="image-preview"
+                  src=""
+                  alt="Preview"
+                />
+
+                <input
+                  type="file"
+                  name="profile_image"
+                  class="form-control product-input image-input"
+                  accept="image/*"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn update-btn">
+            <i class="bi bi-pencil-square me-2"></i>
+            Update Profile
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

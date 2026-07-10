@@ -1,0 +1,238 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Velora Admin</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+   <link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin-dark.css' %}">
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    
+  </head>
+
+  <body>
+    <div class="admin-wrapper">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="brand-box">
+          <i class="bi bi-bag-heart-fill"></i>
+          <h4>Velora</h4>
+          <span>Admin Panel</span>
+        </div>
+
+<ul class="sidebar-menu">
+
+  {% if can_view_dashboard %}
+  <li>
+    <a href="{% url 'admin_dashboard' %}" class="sidebar-link">
+      <i class="bi bi-speedometer2"></i>
+      <span>Dashboard</span>
+    </a>
+  </li>
+  {% endif %}
+
+  {% if can_manage_admins or can_manage_customers or can_manage_roles %}
+  <li>
+    <a class="sidebar-link" data-bs-toggle="collapse" href="#userMenu">
+      <i class="bi bi-people-fill"></i>
+      <span>User Management</span>
+      <i class="bi bi-chevron-down ms-auto"></i>
+    </a>
+
+    <div class="collapse sidebar-submenu" id="userMenu">
+
+      {% if can_manage_admins %}
+      <a href="{% url 'admin_users' %}">Admin Users</a>
+      {% endif %}
+
+      {% if can_manage_customers %}
+      <a href="{% url 'admin_customers' %}">Customers</a>
+      {% endif %}
+
+      {% if can_manage_roles %}
+      <a href="{% url 'admin_role_list' %}">Role Management</a>
+      {% endif %}
+
+    </div>
+  </li>
+  {% endif %}
+
+  {% if can_manage_products or can_manage_categories %}
+  <li>
+    <a class="sidebar-link" data-bs-toggle="collapse" href="#catalogMenu">
+      <i class="bi bi-box-seam"></i>
+      <span>Catalog</span>
+      <i class="bi bi-chevron-down ms-auto"></i>
+    </a>
+
+    <div class="collapse sidebar-submenu" id="catalogMenu">
+
+      {% if can_manage_products %}
+      <a href="{% url 'admin_products' %}">Products</a>
+      {% endif %}
+
+
+      {% if can_manage_categories %}
+      <a href="{% url 'category_list' %}">Categories</a>
+      {% endif %}
+
+    </div>
+  </li>
+  {% endif %}
+
+  {% if can_manage_orders or can_manage_payments %}
+  <li>
+    <a class="sidebar-link" data-bs-toggle="collapse" href="#salesMenu">
+      <i class="bi bi-cart-check"></i>
+      <span>Sales</span>
+      <i class="bi bi-chevron-down ms-auto"></i>
+    </a>
+
+    <div class="collapse sidebar-submenu" id="salesMenu">
+
+      {% if can_manage_orders %}
+      <a href="{% url 'admin_orders' %}">Orders</a>
+      {% endif %}
+
+      {% if can_manage_payments %}
+      <a href="{% url 'admin_payments' %}">Payments</a>
+      {% endif %}
+
+    </div>
+  </li>
+  {% endif %}
+
+  {% if can_view_reports %}
+  <li>
+    <a class="sidebar-link" data-bs-toggle="collapse" href="#reportMenu">
+      <i class="bi bi-bar-chart-line"></i>
+      <span>Reports</span>
+      <i class="bi bi-chevron-down ms-auto"></i>
+    </a>
+
+    <div class="collapse sidebar-submenu" id="reportMenu">
+      <a href="#">Sales Report</a>
+      <a href="#">Customer Report</a>
+      <a href="#">Product Report</a>
+      <a href="#">Revenue Report</a>
+    </div>
+  </li>
+  {% endif %}
+
+  <li>
+    <a class="sidebar-link" data-bs-toggle="collapse" href="#settingMenu">
+      <i class="bi bi-gear"></i>
+      <span>Settings</span>
+      <i class="bi bi-chevron-down ms-auto"></i>
+    </a>
+
+    <div class="collapse sidebar-submenu" id="settingMenu">
+      <a href="{% url 'admin_profile' %}">Profile</a>
+      <a href="javascript:void(0)" id="themeToggleBtn">
+    <i class="bi bi-moon-stars me-2"></i>
+    <span id="themeToggleText">Dark Mode</span>
+  </a>
+      <a href="{% url 'logout_user' %}" class="text-danger">Logout</a>
+    </div>
+  </li>
+
+</ul>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <nav class="top-navbar">
+          <div>
+            <h4 class="mb-0 fw-bold">Dashboard</h4>
+            <small class="text-muted">
+              Welcome back,
+              {{request.user.first_name|default:request.user.username }}
+            </small>
+          </div>
+          <div class="header-datetime me-4">
+    <i class="bi bi-calendar-event"></i>
+    <span id="liveDateTime"></span>
+</div>
+
+          <div class="admin-profile">
+            <button class="notify-btn">
+              <i class="bi bi-bell"></i>
+              <span>4</span>
+            </button>
+
+            {% if request.user.profile_image %}
+            <img
+              src="{{ request.user.profile_image.url }}"
+              alt="{{ request.user.username }}"
+              class="rounded-circle"
+              width="45"
+              height="45"
+              style="object-fit: cover"
+            />
+            {% else %}
+            <img
+              src="{% static 'images/default-user.png' %}"
+              alt="Default User"
+              class="rounded-circle"
+              width="45"
+              height="45"
+              style="object-fit: cover"
+            />
+            {% endif %}
+
+            <div>
+              <h6 class="mb-0">
+                {% if request.user.first_name %} {{ request.user.first_name }}
+                {{ request.user.last_name }} {% else %} {{request.user.username}} {% endif %}
+              </h6>
+
+              <small>
+                {% if request.user.role %} {{ request.user.role.role_name }} {% else %} Administrator {% endif %}
+              </small>
+            </div>
+          </div>
+        </nav>
+
+        <section class="page-content">
+          {% block admincontent %}{% endblock %}
+        </section>
+      </main>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+{% if messages %}
+  {% for message in messages %}
+    Swal.fire({
+      icon: "{{ message.tags }}",
+      title: "{{ message|escapejs }}",
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    });
+  {% endfor %}
+{% endif %}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'javascript/script.js' %}"></script>
+
+  </body>
+</html>

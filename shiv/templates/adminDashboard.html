@@ -1,0 +1,196 @@
+{% extends "adminLayout.html" %}
+
+{% block admincontent %}
+
+<div class="dark-dashboard">
+
+  <div class="row g-4 mb-4">
+
+  <div class="col-lg-3 col-md-6">
+    <div class="dashboard-small-card">
+      <div>
+        <p>Total Sales</p>
+        <h3>₹{{ total_sales|default:0 }}</h3>
+      </div>
+      <div class="dashboard-small-icon bg-blue">
+        <i class="bi bi-currency-rupee"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="dashboard-small-card">
+      <div>
+        <p>Total Orders</p>
+        <h3>{{ total_orders|default:0 }}</h3>
+      </div>
+      <div class="dashboard-small-icon bg-green">
+        <i class="bi bi-cart-check"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="dashboard-small-card">
+      <div>
+        <p>Customers</p>
+        <h3>{{ total_customers|default:0 }}</h3>
+      </div>
+      <div class="dashboard-small-icon bg-orange">
+        <i class="bi bi-people"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="dashboard-small-card">
+      <div>
+        <p>Products</p>
+        <h3>{{ total_products|default:0 }}</h3>
+      </div>
+      <div class="dashboard-small-icon bg-purple">
+        <i class="bi bi-box-seam"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+  <div class="row g-4">
+
+    <div class="col-lg-8">
+      <div class="dark-panel">
+        <div class="panel-header">
+          <div>
+            <h4>Recent Orders</h4>
+            <p>Latest customer purchases</p>
+          </div>
+
+          <a href="{% url 'admin_orders' %}" class="panel-link">
+            View All
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table dark-table align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Customer</th>
+                <th>Products</th>
+                <th>Status</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for order in recent_orders %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+
+                <td>
+                  <div class="order-user">
+                    <span>{{ order.user.username|slice:":1"|upper }}</span>
+                    <div>
+                      <h6>{{ order.user.username }}</h6>
+                      <small>{{ order.order_date|date:"d M Y" }}</small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  {% for item in order.items.all %}
+                    <span class="product-line">{{ item.product_name }} × {{ item.quantity }}</span>
+                  {% endfor %}
+                </td>
+
+                <td>
+                  {% if order.order_status == "Delivered" %}
+                    <span class="dark-badge success">Delivered</span>
+                  {% elif order.order_status == "Pending" %}
+                    <span class="dark-badge warning">Pending</span>
+                  {% elif order.order_status == "Cancelled" %}
+                    <span class="dark-badge danger">Cancelled</span>
+                  {% else %}
+                    <span class="dark-badge info">{{ order.order_status }}</span>
+                  {% endif %}
+                </td>
+
+                <td class="fw-bold">₹{{ order.total_amount }}</td>
+              </tr>
+
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  No recent orders found
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="dark-panel quick-panel">
+        <div class="panel-header">
+          <div>
+            <h4>Quick Actions</h4>
+            <p>Fast admin shortcuts</p>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          {% if can_manage_products %}
+          <a href="{% url 'admin_products' %}">
+            <i class="bi bi-plus-circle"></i>
+            Add Product
+          </a>
+          {% endif %}
+
+          {% if can_manage_categories %}
+          <a href="{% url 'add_category' %}">
+            <i class="bi bi-tags"></i>
+            Add Category
+          </a>
+          {% endif %}
+
+          {% if can_manage_orders %}
+          <a href="{% url 'admin_orders' %}">
+            <i class="bi bi-bag-check"></i>
+            Manage Orders
+          </a>
+          {% endif %}
+
+          {% if can_manage_customers %}
+          <a href="{% url 'admin_customers' %}">
+            <i class="bi bi-people"></i>
+            Customers
+          </a>
+          {% endif %}
+
+          {% if can_manage_admins %}
+          <a href="{% url 'admin_users' %}">
+            <i class="bi bi-person-gear"></i>
+            Admin Users
+          </a>
+          {% endif %}
+
+          {% if can_manage_roles %}
+          <a href="{% url 'admin_role_list' %}">
+            <i class="bi bi-shield-lock"></i>
+            Role Management
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

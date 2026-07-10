@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="checkout-page">
+  <div class="container">
+
+    <div class="checkout-header">
+      <div>
+        <h2>Checkout</h2>
+        <p>Review your order and complete your purchase</p>
+      </div>
+
+      <a href="{% url 'cart' %}" class="back-cart-btn">
+        <i class="bi bi-arrow-left"></i> Back to Cart
+      </a>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-lg-8">
+
+        <!-- DELIVERY ADDRESS -->
+        <div class="checkout-card">
+          <div class="checkout-title-row">
+            <h4>Delivery Address</h4>
+
+            <button type="button" class="small-action-btn" onclick="openAddressSelectModal()">
+              Change Address
+            </button>
+          </div>
+
+          <div id="selectedAddressBox">
+            {% if selected_address %}
+            <div class="checkout-selected-address">
+              <div>
+                <h5>{{ selected_address.full_name }}</h5>
+                <p><i class="bi bi-telephone"></i> {{ selected_address.mobile_no }}</p>
+                <p>
+                  {{ selected_address.address_line1 }}
+                  {% if selected_address.address_line2 %}, {{ selected_address.address_line2 }}{% endif %},
+                  {{ selected_address.city }},
+                  {{ selected_address.state_name }},
+                  {{ selected_address.country_name }} - {{ selected_address.pincode }}
+                </p>
+              </div>
+
+              <span>Default</span>
+            </div>
+            {% else %}
+            <p class="text-muted">No address found.</p>
+            <a href="{% url 'my_profile' %}?tab=address&open=add" class="checkout-main-btn">
+  Add Address
+</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- PAYMENT -->
+        <div class="checkout-card mt-4">
+          <h4>Payment Method</h4>
+
+          <div class="payment-options">
+            <label>
+              <input type="radio" name="payment_method" value="cod" checked>
+              <span><i class="bi bi-cash-stack"></i> Cash on Delivery</span>
+            </label>
+
+            <label>
+              <input type="radio" name="payment_method" value="razorpay">
+              <span><i class="bi bi-credit-card"></i> Razorpay Online Payment</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ITEMS -->
+        <div class="checkout-card mt-4">
+          <h4>Order Items</h4>
+
+          {% for item in cart_items %}
+          <div class="checkout-item">
+            {% if item.product.images.first %}
+              <img src="{{ item.product.images.first.image.url }}">
+            {% endif %}
+
+            <div>
+              <h5>{{ item.product.product_name }}</h5>
+              <p>Qty: {{ item.quantity }}</p>
+              <strong>₹{{ item.price }}</strong>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-muted">Your cart is empty.</p>
+          {% endfor %}
+        </div>
+
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="col-lg-4">
+        <div class="checkout-summary">
+          <h4>Order Summary</h4>
+
+          <div class="summary-row">
+            <span>Items</span>
+            <strong>{{ cart_items|length }}</strong>
+          </div>
+
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong>₹{{ subtotal }}</strong>
+          </div>
+
+          <div class="summary-row">
+            <span>Shipping</span>
+            <strong>
+              {% if shipping == 0 %}Free{% else %}₹{{ shipping }}{% endif %}
+            </strong>
+          </div>
+
+          <hr>
+
+          <div class="summary-total">
+            <span>Total</span>
+            <strong>₹{{ total }}</strong>
+          </div>
+
+          <button type="button" class="place-order-btn" id="placeOrderBtn">
+            <i class="bi bi-bag-check"></i> Place Order
+          </button>
+
+          <p class="secure-text">
+            <i class="bi bi-shield-check"></i>
+            Secure checkout with Velora
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- CHANGE ADDRESS POPUP -->
+<div class="checkout-modal-overlay" id="addressSelectModal">
+  <div class="checkout-modal">
+
+    <div class="checkout-modal-head">
+      <div>
+        <h4>Select Delivery Address</h4>
+        <p>Choose where you want your order delivered</p>
+      </div>
+
+      <button type="button" onclick="closeAddressSelectModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="checkout-address-list">
+      {% for address in addresses %}
+      <label class="modal-address-card {% if address.is_default %}active{% endif %}">
+        <input
+          type="radio"
+          name="checkout_address"
+          value="{{ address.id }}"
+          data-url="{% url 'checkout_set_address' address.id %}"
+          {% if address.is_default %}checked{% endif %}
+        >
+
+        <div>
+          <h5>{{ address.full_name }}</h5>
+          <p><i class="bi bi-telephone"></i> {{ address.mobile_no }}</p>
+          <p>
+            {{ address.address_line1 }}
+            {% if address.address_line2 %}, {{ address.address_line2 }}{% endif %},
+            {{ address.city }},
+            {{ address.state_name }},
+            {{ address.country_name }} - {{ address.pincode }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="edit-address-link checkout-edit-address"
+          data-id="{{ address.id }}"
+          data-full-name="{{ address.full_name }}"
+          data-mobile-no="{{ address.mobile_no }}"
+          data-line1="{{ address.address_line1 }}"
+          data-line2="{{ address.address_line2|default_if_none:'' }}"
+          data-city="{{ address.city }}"
+          data-state="{{ address.state_name }}"
+          data-country="{{ address.country_name }}"
+          data-pincode="{{ address.pincode }}"
+          data-default="{{ address.is_default|yesno:'true,false' }}"
+        >
+          <i class="bi bi-pencil-square"></i> Edit
+        </button>
+      </label>
+      {% empty %}
+      <p class="text-muted">No address found.</p>
+      {% endfor %}
+    </div>
+
+    <a href="{% url 'my_profile' %}?tab=address&open=add" class="add-address-link">
+  <i class="bi bi-plus-circle"></i> Add New Address
+</a>
+
+    <div class="checkout-modal-actions">
+      <button type="button" class="cancel-btn" onclick="closeAddressSelectModal()">
+        Cancel
+      </button>
+
+      <button type="button" class="primary-btn" id="saveCheckoutAddressBtn">
+        Save Address
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- EDIT ADDRESS POPUP -->
+<div class="checkout-modal-overlay" id="checkoutEditAddressModal">
+  <div class="checkout-modal">
+
+    <div class="checkout-modal-head">
+      <div>
+        <h4>Edit Address</h4>
+        <p>Update your delivery address details</p>
+      </div>
+
+      <button type="button" onclick="closeCheckoutEditAddressModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form id="checkoutEditAddressForm" method="POST">
+      {% csrf_token %}
+
+      <input type="hidden" id="editAddressId">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label>Full Name</label>
+          <input type="text" name="full_name" id="editFullName">
+        </div>
+
+        <div class="col-md-6">
+          <label>Mobile Number</label>
+          <input type="text" name="mobile_no" id="editMobileNo">
+        </div>
+
+        <div class="col-md-12">
+          <label>Address Line 1</label>
+          <input type="text" name="address_line1" id="editLine1">
+        </div>
+
+        <div class="col-md-12">
+          <label>Address Line 2</label>
+          <input type="text" name="address_line2" id="editLine2">
+        </div>
+
+        <div class="col-md-4">
+          <label>City</label>
+          <input type="text" name="city" id="editCity">
+        </div>
+
+        <div class="col-md-4">
+          <label>State</label>
+          <input type="text" name="state_name" id="editState">
+        </div>
+
+        <div class="col-md-4">
+          <label>Country</label>
+          <input type="text" name="country_name" id="editCountry">
+        </div>
+
+        <div class="col-md-6">
+          <label>Pincode</label>
+          <input type="text" name="pincode" id="editPincode">
+        </div>
+
+        <div class="col-md-6 d-flex align-items-end">
+          <div class="default-check">
+            <input type="checkbox" name="is_default" id="editIsDefault">
+            <label for="editIsDefault">Set as default address</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="checkout-modal-actions">
+        <button type="button" class="cancel-btn" onclick="closeCheckoutEditAddressModal()">
+          Cancel
+        </button>
+
+        <button type="submit" class="primary-btn">
+          Update Address
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+function toast(icon, title) {
+  Swal.fire({
+    toast: true,
+    position: "top-end",
+    icon: icon,
+    title: title,
+    showConfirmButton: false,
+    timer: 1600
+  });
+}
+
+function openAddressSelectModal() {
+  document.getElementById("addressSelectModal").classList.add("show");
+}
+
+function closeAddressSelectModal() {
+  document.getElementById("addressSelectModal").classList.remove("show");
+}
+
+function openCheckoutEditAddressModal() {
+  document.getElementById("checkoutEditAddressModal").classList.add("show");
+}
+
+function closeCheckoutEditAddressModal() {
+  document.getElementById("checkoutEditAddressModal").classList.remove("show");
+}
+
+document.addEventListener("change", function(e) {
+  if (e.target.name === "checkout_address") {
+    document.querySelectorAll(".modal-address-card").forEach(card => {
+      card.classList.remove("active");
+    });
+
+    e.target.closest(".modal-address-card").classList.add("active");
+  }
+});
+
+document.addEventListener("click", function(e) {
+  const btn = e.target.closest(".checkout-edit-address");
+  if (!btn) return;
+
+  e.preventDefault();
+
+  document.getElementById("editAddressId").value = btn.dataset.id;
+  document.getElementById("editFullName").value = btn.dataset.fullName || "";
+  document.getElementById("editMobileNo").value = btn.dataset.mobileNo || "";
+  document.getElementById("editLine1").value = btn.dataset.line1 || "";
+  document.getElementById("editLine2").value = btn.dataset.line2 || "";
+  document.getElementById("editCity").value = btn.dataset.city || "";
+  document.getElementById("editState").value = btn.dataset.state || "";
+  document.getElementById("editCountry").value = btn.dataset.country || "";
+  document.getElementById("editPincode").value = btn.dataset.pincode || "";
+  document.getElementById("editIsDefault").checked = btn.dataset.default === "true";
+
+  closeAddressSelectModal();
+  openCheckoutEditAddressModal();
+});
+
+document.getElementById("checkoutEditAddressForm")?.addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  const addressId = document.getElementById("editAddressId").value;
+  const formData = new FormData(this);
+
+  fetch(`/address/edit/${addressId}/`, {
+    method: "POST",
+    body: formData,
+    headers: {
+      "X-Requested-With": "XMLHttpRequest"
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "success") {
+      toast("success", data.message);
+      closeCheckoutEditAddressModal();
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    } else {
+      toast("error", data.message);
+    }
+  });
+});
+
+document.getElementById("saveCheckoutAddressBtn")?.addEventListener("click", function() {
+  const selected = document.querySelector('input[name="checkout_address"]:checked');
+
+  if (!selected) {
+    toast("warning", "Please select address");
+    return;
+  }
+
+  fetch(selected.dataset.url, {
+    headers: {
+      "X-Requested-With": "XMLHttpRequest"
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "success") {
+      const a = data.address;
+
+      document.getElementById("selectedAddressBox").innerHTML = `
+        <div class="checkout-selected-address">
+          <div>
+            <h5>${a.full_name}</h5>
+            <p><i class="bi bi-telephone"></i> ${a.mobile_no}</p>
+            <p>
+              ${a.address_line1}
+              ${a.address_line2 ? ", " + a.address_line2 : ""},
+              ${a.city},
+              ${a.state_name},
+              ${a.country_name} - ${a.pincode}
+            </p>
+          </div>
+          <span>Default</span>
+        </div>
+      `;
+
+      closeAddressSelectModal();
+      toast("success", data.message);
+    }
+  });
+});
+
+document.getElementById("placeOrderBtn")?.addEventListener("click", function() {
+  const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+
+  if (paymentMethod === "cod") {
+    Swal.fire({
+      icon: "success",
+      title: "Cash on Delivery selected",
+      text: "Next step: order creation.",
+      timer: 1600,
+      showConfirmButton: false
+    });
+  }
+
+  if (paymentMethod === "razorpay") {
+    const options = {
+      key: "YOUR_RAZORPAY_KEY_ID",
+      amount: "{{ total }}00",
+      currency: "INR",
+      name: "Velora",
+      description: "Order Payment",
+      handler: function(response) {
+        Swal.fire({
+          icon: "success",
+          title: "Payment Successful",
+          text: "Payment ID: " + response.razorpay_payment_id
+        });
+      },
+      prefill: {
+        name: "{{ request.user.first_name }} {{ request.user.last_name }}",
+        email: "{{ request.user.email }}",
+        contact: "{{ request.user.mobile_no }}"
+      },
+      theme: {
+        color: "#2563eb"
+      }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.open();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("tab") === "address") {
+    document.querySelectorAll(".account-menu button").forEach(btn => {
+      btn.classList.remove("active");
+    });
+
+    document.querySelectorAll(".account-tab").forEach(tab => {
+      tab.classList.remove("active");
+    });
+
+    const addressBtn = document.querySelector('[data-tab="addressTab"]');
+    const addressTab = document.getElementById("addressTab");
+
+    if (addressBtn) addressBtn.classList.add("active");
+    if (addressTab) addressTab.classList.add("active");
+
+    setTimeout(() => {
+      addressTab?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+  }
+
+  if (params.get("open") === "add") {
+    setTimeout(() => {
+      if (typeof openAddressModal === "function") {
+        openAddressModal();
+      }
+    }, 500);
+  }
+});
+</script>
+
+{% endblock %}

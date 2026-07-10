@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="account-page">
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="account-hero">
+      <div>
+        <h2>My Account</h2>
+        <p>Manage your profile, orders, wishlist and delivery addresses</p>
+      </div>
+
+      <a href="{% url 'home_page' %}" class="continue-btn">
+        <i class="bi bi-arrow-left"></i> Continue Shopping
+      </a>
+    </div>
+
+    <div class="row g-4 account-main-row">
+
+      <!-- LEFT SIDEBAR -->
+      <div class="col-lg-4">
+        <div class="account-sidebar">
+
+          <div class="account-user">
+            {% if user.profile_image %}
+              <img src="{{ user.profile_image.url }}" class="account-img" id="profileCardImage">
+            {% else %}
+              <div class="account-avatar" id="profileAvatarBox">
+                <i class="bi bi-person"></i>
+              </div>
+              <img src="" class="account-img d-none" id="profileCardImage">
+            {% endif %}
+
+            <h4 id="profileName">{{ user.first_name }} {{ user.last_name }}</h4>
+
+            <span id="profileRole">
+              {% if user.role %}
+                {{ user.role.role_name }}
+              {% else %}
+                Customer
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="account-menu">
+            <button type="button" class="active" data-tab="profileTab">
+              <i class="bi bi-person"></i> Profile
+            </button>
+
+            <button type="button" data-tab="addressTab">
+              <i class="bi bi-geo-alt"></i> Addresses
+            </button>
+
+            <button type="button" data-tab="ordersTab">
+              <i class="bi bi-bag-check"></i> Orders
+            </button>
+
+            <button type="button" data-tab="wishlistTab">
+              <i class="bi bi-heart"></i> Wishlist
+            </button>
+
+            <button type="button" data-tab="settingsTab">
+              <i class="bi bi-gear"></i> Settings
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT CONTENT -->
+      <div class="col-lg-8">
+
+        <!-- PROFILE TAB -->
+        <div class="account-tab active" id="profileTab">
+          <div class="account-card">
+
+            <div class="account-card-head">
+              <h4>Profile Details</h4>
+
+              <button type="button" class="primary-btn" onclick="openProfileModal()">
+                <i class="bi bi-pencil-square"></i> Update Profile
+              </button>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-box">
+                <span>First Name</span>
+                <h6 id="showFirstName">{{ user.first_name }}</h6>
+              </div>
+
+              <div class="info-box">
+                <span>Last Name</span>
+                <h6 id="showLastName">{{ user.last_name }}</h6>
+              </div>
+
+              <div class="info-box">
+                <span>Username</span>
+                <h6 id="showUsername">{{ user.username }}</h6>
+              </div>
+
+              <div class="info-box">
+                <span>Email</span>
+                <h6 id="showEmail">{{ user.email }}</h6>
+              </div>
+
+              <div class="info-box">
+                <span>Mobile Number</span>
+                <h6 id="showMobile">{{ user.mobile_no|default:"Not added" }}</h6>
+              </div>
+
+              <div class="info-box">
+                <span>Role</span>
+                <h6 id="showRole">
+                  {% if user.role %}
+                    {{ user.role.role_name }}
+                  {% else %}
+                    Customer
+                  {% endif %}
+                </h6>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ADDRESS TAB -->
+        <div class="account-tab" id="addressTab">
+          <div class="account-card">
+
+            <div class="account-card-head">
+              <h4>Delivery Addresses</h4>
+
+              <button type="button" class="primary-btn" onclick="openAddressModal()">
+                <i class="bi bi-plus-circle"></i> Add Address
+              </button>
+            </div>
+
+            <div id="defaultAddressBox">
+              {% if default_address %}
+                <h5 class="mini-title">Default Address</h5>
+
+                <div class="address-box default-address" data-id="{{ default_address.id }}">
+                  <div>
+                    <h5>{{ default_address.full_name }}</h5>
+                    <p><i class="bi bi-telephone"></i> {{ default_address.mobile_no }}</p>
+                    <p>
+                      {{ default_address.address_line1 }}
+                      {% if default_address.address_line2 %}, {{ default_address.address_line2 }}{% endif %},
+                      {{ default_address.city }},
+                      {{ default_address.state_name }},
+                      {{ default_address.country_name }} - {{ default_address.pincode }}
+                    </p>
+                  </div>
+
+                  <div class="address-actions">
+                    <button type="button"
+                            class="edit-btn edit-address-ajax"
+                            data-id="{{ default_address.id }}"
+                            data-full-name="{{ default_address.full_name }}"
+                            data-mobile-no="{{ default_address.mobile_no }}"
+                            data-line1="{{ default_address.address_line1 }}"
+                            data-line2="{{ default_address.address_line2|default_if_none:'' }}"
+                            data-city="{{ default_address.city }}"
+                            data-state="{{ default_address.state_name }}"
+                            data-country="{{ default_address.country_name }}"
+                            data-pincode="{{ default_address.pincode }}"
+                            data-default="true">
+                      Edit
+                    </button>
+
+                    <span class="default-badge">Default</span>
+
+                    <button type="button"
+                            class="delete-btn delete-address-ajax"
+                            data-url="{% url 'delete_address' default_address.id %}">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              {% else %}
+                <p class="empty-text" id="noDefaultText">No default address added yet.</p>
+              {% endif %}
+            </div>
+
+            <div id="otherAddressSection" {% if not other_addresses %}style="display:none;"{% endif %}>
+              <h5 class="mini-title mt-4">Other Addresses</h5>
+
+              <div id="otherAddressList">
+                {% for address in other_addresses %}
+                  <div class="address-box" data-id="{{ address.id }}">
+                    <div>
+                      <h5>{{ address.full_name }}</h5>
+                      <p><i class="bi bi-telephone"></i> {{ address.mobile_no }}</p>
+                      <p>
+                        {{ address.address_line1 }}
+                        {% if address.address_line2 %}, {{ address.address_line2 }}{% endif %},
+                        {{ address.city }},
+                        {{ address.state_name }},
+                        {{ address.country_name }} - {{ address.pincode }}
+                      </p>
+                    </div>
+
+                    <div class="address-actions">
+                      <button type="button"
+                              class="edit-btn edit-address-ajax"
+                              data-id="{{ address.id }}"
+                              data-full-name="{{ address.full_name }}"
+                              data-mobile-no="{{ address.mobile_no }}"
+                              data-line1="{{ address.address_line1 }}"
+                              data-line2="{{ address.address_line2|default_if_none:'' }}"
+                              data-city="{{ address.city }}"
+                              data-state="{{ address.state_name }}"
+                              data-country="{{ address.country_name }}"
+                              data-pincode="{{ address.pincode }}"
+                              data-default="false">
+                        Edit
+                      </button>
+
+                      <button type="button"
+                              class="set-btn set-default-ajax"
+                              data-url="{% url 'set_default_address' address.id %}">
+                        Set Default
+                      </button>
+
+                      <button type="button"
+                              class="delete-btn delete-address-ajax"
+                              data-url="{% url 'delete_address' address.id %}">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div class="account-tab" id="ordersTab">
+          <div class="account-card">
+            <h4>Recent Orders</h4>
+
+            {% for order in orders %}
+              <div class="order-box">
+                <div>
+                  <h5>#{{ order.order_number }}</h5>
+                  <p>{{ order.order_date|date:"d M Y" }}</p>
+                </div>
+
+                <div>
+                  <span class="order-status">{{ order.order_status }}</span>
+                  <h6>₹{{ order.total_amount }}</h6>
+                </div>
+              </div>
+            {% empty %}
+              <p class="empty-text">No orders found yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- WISHLIST TAB -->
+        <div class="account-tab" id="wishlistTab">
+          <div class="account-card">
+            <div class="account-card-head">
+              <h4>Wishlist</h4>
+              <a href="{% url 'wishlist_page' %}" class="primary-btn">View All</a>
+            </div>
+
+            {% for item in wishlist_items %}
+              <div class="wishlist-mini">
+                <div>
+                  <h5>{{ item.product.product_name }}</h5>
+                  <p>₹{{ item.product.price }}</p>
+                </div>
+
+                <a href="{% url 'wishlist_page' %}" class="set-btn">Open Wishlist</a>
+              </div>
+            {% empty %}
+              <p class="empty-text">Your wishlist is empty.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div class="account-tab" id="settingsTab">
+          <div class="account-card">
+            <h4>Settings</h4>
+
+            <div class="settings-row">
+              <div>
+                <h5>Theme Mode</h5>
+                <p>Choose your shopping theme</p>
+              </div>
+
+              <div class="theme-buttons">
+                <button type="button" onclick="setTheme('light')">
+                  <i class="bi bi-brightness-high"></i> Light
+                </button>
+
+                <button type="button" onclick="setTheme('dark')">
+                  <i class="bi bi-moon"></i> Dark
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div>
+                <h5>Notifications</h5>
+                <p>Receive order and shopping updates</p>
+              </div>
+
+              <button type="button" class="set-btn">Enabled</button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE MODAL -->
+<div class="profile-modal-overlay" id="profileModal">
+  <div class="profile-modal">
+
+    <div class="modal-head">
+      <div>
+        <h4>Update Profile</h4>
+        <p>Edit your personal information</p>
+      </div>
+
+      <button onclick="closeProfileModal()" type="button" class="modal-close-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form id="profileForm" method="POST" enctype="multipart/form-data"
+          data-url="{% url 'update_profile_ajax' %}">
+      {% csrf_token %}
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label>First Name</label>
+          <input type="text" name="first_name" value="{{ user.first_name }}">
+        </div>
+
+        <div class="col-md-6">
+          <label>Last Name</label>
+          <input type="text" name="last_name" value="{{ user.last_name }}">
+        </div>
+
+        <div class="col-md-6">
+          <label>Username</label>
+          <input type="text" name="username" value="{{ user.username }}">
+        </div>
+
+        <div class="col-md-6">
+          <label>Email</label>
+          <input type="email" name="email" value="{{ user.email }}">
+        </div>
+
+        <div class="col-md-6">
+          <label>Mobile Number</label>
+          <input type="text" name="mobile_no" value="{{ user.mobile_no }}">
+        </div>
+
+        <div class="col-md-12">
+          <label>Profile Image</label>
+
+          <div class="profile-upload-box">
+            <div class="profile-preview">
+              {% if user.profile_image %}
+                <img id="previewImage" src="{{ user.profile_image.url }}">
+              {% else %}
+                <i class="bi bi-person" id="previewIcon"></i>
+                <img id="previewImage" src="" class="d-none">
+              {% endif %}
+            </div>
+
+            <div class="upload-content">
+              <label for="id_profile_image" class="upload-btn">
+                <i class="bi bi-upload"></i> Choose Image
+              </label>
+
+
+              <input type="file" name="profile_image" accept="image/*" id="id_profile_image">
+
+              <p id="fileName">No image selected</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" onclick="closeProfileModal()" class="cancel-btn">
+          Cancel
+        </button>
+
+        <button type="submit" name="update_profile" class="primary-btn">
+          <i class="bi bi-check-circle"></i> Save Changes
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<!-- ADDRESS MODAL -->
+<div class="profile-modal-overlay" id="addressModal">
+  <div class="profile-modal">
+
+    <div class="modal-head">
+      <div>
+        <h4 id="addressModalTitle">Add New Address</h4>
+        <p>Add delivery details for faster checkout</p>
+      </div>
+
+      <button onclick="closeAddressModal()" type="button" class="modal-close-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form id="addressForm" method="POST" data-add-url="{% url 'add_address_ajax' %}">
+      {% csrf_token %}
+
+      <input type="hidden" name="form_type" id="addressFormType" value="add_address">
+      <input type="hidden" name="address_id" id="addressId">
+      <input type="hidden" id="addressEditBaseUrl" value="/address/edit/">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label>Full Name</label>
+          {{ address_form.full_name }}
+        </div>
+
+        <div class="col-md-6">
+          <label>Mobile Number</label>
+          {{ address_form.mobile_no }}
+        </div>
+
+        <div class="col-md-12">
+          <label>Address Line 1</label>
+          {{ address_form.address_line1 }}
+        </div>
+
+        <div class="col-md-12">
+          <label>Address Line 2</label>
+          {{ address_form.address_line2 }}
+        </div>
+
+        <div class="col-md-4">
+          <label>City</label>
+          {{ address_form.city }}
+        </div>
+
+        <div class="col-md-4">
+          <label>State</label>
+          {{ address_form.state_name }}
+        </div>
+
+        <div class="col-md-4">
+          <label>Country</label>
+          {{ address_form.country_name }}
+        </div>
+
+        <div class="col-md-6">
+          <label>Pincode</label>
+          {{ address_form.pincode }}
+        </div>
+
+        <div class="col-md-6 d-flex align-items-end">
+          <div class="default-check">
+            {{ address_form.is_default }}
+            <label for="{{ address_form.is_default.id_for_label }}">
+              Set as default address
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" onclick="closeAddressModal()" class="cancel-btn">
+          Cancel
+        </button>
+
+        <button type="submit" class="primary-btn" id="addressSubmitBtn">
+          Add Address
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

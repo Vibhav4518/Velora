@@ -1,0 +1,334 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div class="admin-users-header">
+  <div>
+    <h3>Customers</h3>
+    <p>Manage registered customers and account status</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+
+  <div class="col-lg-4 col-md-6">
+    <div class="customer-small-card">
+      <div>
+        <p>Total Customers</p>
+        <h3>{{ total_customers|default:0 }}</h3>
+      </div>
+
+      <div class="customer-small-icon bg-blue">
+        <i class="bi bi-people-fill"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <div class="customer-small-card">
+      <div>
+        <p>Active Customers</p>
+        <h3>{{ active_customers|default:0 }}</h3>
+      </div>
+
+      <div class="customer-small-icon bg-green">
+        <i class="bi bi-person-check"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <div class="customer-small-card">
+      <div>
+        <p>Inactive Customers</p>
+        <h3>{{ inactive_customers|default:0 }}</h3>
+      </div>
+
+      <div class="customer-small-icon bg-red">
+        <i class="bi bi-person-x"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="admin-user-table-card">
+  <div class="table-top">
+    <h4>Customer List</h4>
+
+    <form method="get" class="search-box">
+      <input
+        type="text"
+        name="q"
+        class="form-control"
+        placeholder="Search name, email, mobile..."
+        value="{{ request.GET.q }}"
+      />
+      <button type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table admin-user-table align-middle">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Email</th>
+          <th>Mobile</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for customer in customers %}
+        <tr>
+          <td>
+            <div class="user-info-box">
+              {% if customer.profile_image %}
+              <img src="{{ customer.profile_image.url }}" alt="customer" />
+              {% else %}
+              <img src="{% static 'images/default-user.png' %}" alt="customer" />
+              {% endif %}
+
+              <div>
+                <h6>
+                  {% if customer.first_name %}
+                    {{ customer.first_name }} {{ customer.last_name }}
+                  {% else %}
+                    {{ customer.username }}
+                  {% endif %}
+                </h6>
+                <small>@{{ customer.username }}</small>
+              </div>
+            </div>
+          </td>
+
+          <td>{{ customer.email }}</td>
+          <td>{{ customer.mobile_no|default:"-" }}</td>
+
+          <td>
+            {% if customer.is_active %}
+              <span class="status active">Active</span>
+            {% else %}
+              <span class="status inactive">Inactive</span>
+            {% endif %}
+          </td>
+
+          <td>{{ customer.date_joined|date:"d M Y" }}</td>
+
+          <td class="text-end">
+  <div class="dropdown">
+    <button class="action-dropdown-btn" data-bs-toggle="dropdown">
+      <i class="bi bi-three-dots-vertical"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
+      <li>
+        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#viewCustomer{{ customer.id }}">
+          <i class="bi bi-eye me-2"></i> View
+        </button>
+      </li>
+
+      <li>
+        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editCustomer{{ customer.id }}">
+          <i class="bi bi-pencil-square me-2"></i> Edit
+        </button>
+      </li>
+
+      <li>
+        <a href="{% url 'delete_customer' customer.id %}" class="dropdown-item text-danger delete-user-btn">
+          <i class="bi bi-trash me-2"></i> Delete
+        </a>
+      </li>
+    </ul>
+  </div>
+</td>
+        </tr>
+
+       <!-- View Customer Modal -->
+<!-- View Customer Modal -->
+<div class="modal fade" id="viewCustomer{{ customer.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Customer Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="customer-view-box">
+
+          <div class="customer-view-header">
+            {% if customer.profile_image %}
+              <img src="{{ customer.profile_image.url }}" class="customer-view-img">
+            {% else %}
+              <img src="{% static 'images/default-user.png' %}" class="customer-view-img">
+            {% endif %}
+
+            <div>
+              <h4>
+                {% if customer.first_name %}
+                  {{ customer.first_name }} {{ customer.last_name }}
+                {% else %}
+                  {{ customer.username }}
+                {% endif %}
+              </h4>
+              <span class="role-pill">Customer</span>
+            </div>
+          </div>
+
+          <div class="customer-detail-grid">
+
+            <div class="customer-detail-item">
+              <i class="bi bi-person"></i>
+              <div>
+                <small>Username</small>
+                <p>{{ customer.username }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-envelope"></i>
+              <div>
+                <small>Email</small>
+                <p>{{ customer.email }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-phone"></i>
+              <div>
+                <small>Mobile</small>
+                <p>{{ customer.mobile_no|default:"-" }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-check-circle"></i>
+              <div>
+                <small>Status</small>
+                <p>{% if customer.is_active %}Active{% else %}Inactive{% endif %}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-calendar"></i>
+              <div>
+                <small>Joined</small>
+                <p>{{ customer.date_joined|date:"d M Y" }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-geo-alt"></i>
+              <div>
+                <small>Address</small>
+                <p>{{ customer.address|default:"No address added" }}</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomer{{ customer.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Customer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="confirm-form" action="{% url 'edit_customer' customer.id %}">
+        {% csrf_token %}
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">First Name</label>
+              <input type="text" name="first_name" value="{{ customer.first_name }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Last Name</label>
+              <input type="text" name="last_name" value="{{ customer.last_name }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="username" value="{{ customer.username }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" value="{{ customer.email }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Mobile</label>
+              <input type="text" name="mobile_no" value="{{ customer.mobile_no }}" class="form-control product-input">
+            </div>
+
+            <div class="col-md-6">
+  <label class="form-label">Profile Image</label>
+
+  <div class="image-upload-box">
+    <img
+      src=""
+      class="image-preview"
+      alt="Preview"
+    >
+
+    <input
+      type="file"
+      name="profile_image"
+      class="form-control product-input image-input"
+      accept="image/*"
+    >
+  </div>
+</div>
+
+            <div class="col-12">
+              <label class="form-label">Active Status</label>
+              <select name="is_active" class="form-select modal-select">
+                <option value="True" {% if customer.is_active %}selected{% endif %}>Active</option>
+                <option value="False" {% if not customer.is_active %}selected{% endif %}>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="product-submit-btn">
+            <i class="bi bi-check-circle me-2"></i> Update Customer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            No customers found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

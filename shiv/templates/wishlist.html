@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="wishlist-page py-5">
+  <div class="container">
+
+    <div class="cart-header mb-4">
+      <div>
+        <h2>My Wishlist</h2>
+        <p>Your saved favourite products</p>
+      </div>
+
+      <a href="{% url 'shop_page' %}" class="continue-btn">
+        <i class="bi bi-arrow-left me-2"></i>
+        Continue Shopping
+      </a>
+    </div>
+
+    <div class="wishlist-card">
+      {% for item in wishlist_items %}
+
+      <div class="wishlist-item">
+        <div class="wishlist-product">
+          {% if item.product.images.first %}
+          <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.product_name }}">
+          {% else %}
+          <img src="{% static 'images/default-product.png' %}" alt="Product">
+          {% endif %}
+
+          <div>
+            <h5>{{ item.product.product_name }}</h5>
+            <p>{{ item.product.category.category_name }}</p>
+            <strong>₹{{ item.product.price }}</strong>
+          </div>
+        </div>
+
+        <div class="wishlist-actions">
+          <button class="add-cart-btn"
+        data-url="{% url 'add_to_cart' item.product.id %}">
+    <i class="bi bi-cart-plus"></i> Add To Cart
+</button>
+
+          <a href="{% url 'remove_from_wishlist' item.id %}" class="wishlist-remove-btn">
+            <i class="bi bi-trash"></i>
+          </a>
+        </div>
+      </div>
+
+      {% empty %}
+
+      <div class="empty-cart">
+        <i class="bi bi-heart"></i>
+        <h4>Your wishlist is empty</h4>
+        <p>Save your favourite products and view them here.</p>
+
+        <a href="{% url 'shop_page' %}" class="btn btn-primary rounded-pill px-4">
+          Explore Products
+        </a>
+      </div>
+
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

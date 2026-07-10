@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="auth-page">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100 py-5">
+      <div class="col-lg-9">
+
+        <div class="auth-card">
+          <div class="row g-0">
+
+            <div class="col-lg-5 auth-left">
+              <div>
+                <h2>Welcome Back</h2>
+                <p>Login to continue shopping your favorite Velora products.</p>
+              </div>
+            </div>
+
+            <div class="col-lg-7">
+              <div class="auth-form-box">
+                <h3>Login</h3>
+                <p class="text-muted mb-4">Enter your account details</p>
+
+
+                <form method="POST">
+                  {% csrf_token %}
+
+                  <div class="mb-3">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      class="form-control auth-input"
+                      placeholder="Enter your email"
+                      required
+                    >
+                  </div>
+
+                  <div class="mb-3">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      name="password"
+                      class="form-control auth-input"
+                      placeholder="Enter your password"
+                      required
+                    >
+                  </div>
+
+                  <button type="submit" class="auth-btn">
+                    Login
+                  </button>
+                </form>
+
+                <p class="text-center mt-4 mb-0">
+                  Don't have an account?
+                  <a href="{% url 'register_user' %}">Register</a>
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

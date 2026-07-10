@@ -1,0 +1,172 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div class="admin-users-header">
+  <div>
+    <h3>Payments</h3>
+    <p>Track customer payments, methods, and payment status</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-3 col-md-6">
+    <div class="order-small-card">
+      <div>
+        <p>Total Payments</p>
+        <h3>{{ total_payments|default:0 }}</h3>
+      </div>
+      <div class="order-small-icon bg-blue">
+        <i class="bi bi-credit-card"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="order-small-card">
+      <div>
+        <p>Paid</p>
+        <h3>{{ paid_payments|default:0 }}</h3>
+      </div>
+      <div class="order-small-icon bg-green">
+        <i class="bi bi-check2-circle"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="order-small-card">
+      <div>
+        <p>Pending</p>
+        <h3>{{ pending_payments|default:0 }}</h3>
+      </div>
+      <div class="order-small-icon bg-orange">
+        <i class="bi bi-clock-history"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6">
+    <div class="order-small-card">
+      <div>
+        <p>Total Amount</p>
+        <h3>₹{{ total_amount|default:0 }}</h3>
+      </div>
+      <div class="order-small-icon bg-purple">
+        <i class="bi bi-currency-rupee"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="admin-user-table-card">
+  <div class="table-top">
+    <h4>Payment List</h4>
+
+    <form method="get" class="search-box">
+      <input
+        type="text"
+        name="q"
+        class="form-control"
+        placeholder="Search order, customer..."
+        value="{{ request.GET.q }}"
+      />
+      <button type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table admin-user-table align-middle">
+      <thead>
+        <tr>
+          <th>Order No.</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Payment Method</th>
+          <th>Payment Status</th>
+          <th>Date</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td>
+            <strong>#{{ order.order_number }}</strong>
+          </td>
+
+          <td>
+            <div class="user-info-box">
+              {% if order.user.profile_image %}
+              <img src="{{ order.user.profile_image.url }}" alt="user">
+              {% else %}
+              <img src="{% static 'images/default-user.png' %}" alt="user">
+              {% endif %}
+
+              <div>
+                <h6>{{ order.user.username }}</h6>
+                <small>{{ order.user.email }}</small>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <strong>₹{{ order.total_amount }}</strong>
+          </td>
+
+          <td>
+            <span class="payment-badge">
+              {{ order.payment|default:"COD" }}
+            </span>
+          </td>
+
+          <td>
+            {% if order.payment_status == "Paid" %}
+              <span class="status active">Paid</span>
+            {% else %}
+              <span class="status inactive">{{ order.payment_status|default:"Pending" }}</span>
+            {% endif %}
+          </td>
+
+          <td>{{ order.order_date|date:"d M Y" }}</td>
+
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="action-dropdown-btn" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+
+              <ul class="dropdown-menu dropdown-menu-end action-menu">
+                <li>
+                  <a href="#" class="dropdown-item">
+                    <i class="bi bi-eye me-2"></i> View
+                  </a>
+                </li>
+
+                <li>
+                  <a href="#" class="dropdown-item">
+                    <i class="bi bi-pencil-square me-2"></i> Update Payment
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-5">
+            No payments found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

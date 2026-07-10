@@ -1,0 +1,330 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div class="admin-users-header">
+  <div>
+    <h3>Role Management</h3>
+    <p>Create roles, manage permissions, and protect default roles</p>
+  </div>
+
+  <button class="add-admin-btn border-0" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+  <i class="bi bi-plus-circle me-2"></i> Add Role
+</button>
+</div>
+
+<div class="row g-4 mb-4">
+
+  <div class="col-lg-4 col-md-6">
+    <div class="role-small-card">
+      <div>
+        <p>Total Roles</p>
+        <h3>{{ total_roles|default:roles.count }}</h3>
+      </div>
+
+      <div class="role-small-icon bg-blue">
+        <i class="bi bi-shield-lock"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <div class="role-small-card">
+      <div>
+        <p>Default Roles</p>
+        <h3>{{ default_roles|default:0 }}</h3>
+      </div>
+
+      <div class="role-small-icon bg-green">
+        <i class="bi bi-check2-circle"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 col-md-6">
+    <div class="role-small-card">
+      <div>
+        <p>Total Permissions</p>
+        <h3>{{ total_permissions|default:0 }}</h3>
+      </div>
+
+      <div class="role-small-icon bg-purple">
+        <i class="bi bi-key"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="admin-user-table-card">
+  <div class="table-top">
+    <h4>Role List</h4>
+
+    <form method="get" class="search-box">
+      <input
+        type="text"
+        name="q"
+        class="form-control"
+        placeholder="Search role..."
+        value="{{ request.GET.q }}"
+      />
+      <button type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table admin-user-table align-middle">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Permissions</th>
+          <th>Type</th>
+          <th>Created</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for role in roles %}
+        <tr>
+          <td>
+            <div class="role-info-box">
+              <div class="role-icon">
+                <i class="bi bi-person-gear"></i>
+              </div>
+              <div>
+                <h6>{{ role.role_name }}</h6>
+                <small>
+        {% if role.is_default %}
+          System role
+        {% else %}
+          Custom role
+        {% endif %}
+      </small>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <button
+              class="permission-btn"
+              data-bs-toggle="modal"
+              data-bs-target="#permissionModal{{ role.id }}"
+            >
+              {{ role.permissions.count }} Permissions
+            </button>
+          </td>
+
+          <td>
+            {% if role.is_default %}
+              <span class="status active">Default</span>
+            {% else %}
+              <span class="role-pill gray">Custom</span>
+            {% endif %}
+          </td>
+
+          <td>{{ role.created_at|date:"d M Y" }}</td>
+
+          <td class="text-end">
+  <div class="dropdown">
+    <button class="action-dropdown-btn" data-bs-toggle="dropdown">
+      <i class="bi bi-three-dots-vertical"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
+      <li>
+        <button
+          class="dropdown-item"
+          data-bs-toggle="modal"
+          data-bs-target="#permissionModal{{ role.id }}"
+        >
+          <i class="bi bi-key me-2"></i> Permissions
+        </button>
+      </li>
+
+      {% if not role.is_default %}
+      <li>
+        <button
+          class="dropdown-item"
+          data-bs-toggle="modal"
+          data-bs-target="#editRole{{ role.id }}"
+        >
+          <i class="bi bi-pencil-square me-2"></i> Edit Role
+        </button>
+      </li>
+
+      <li>
+        <a
+          href="{% url 'admin_delete_role' role.id %}"
+          class="dropdown-item text-danger delete-role-btn"
+        >
+          <i class="bi bi-trash me-2"></i> Delete Role
+        </a>
+      </li>
+      {% else %}
+      <li>
+        <span class="dropdown-item text-muted">
+          <i class="bi bi-lock me-2"></i> Protected
+        </span>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+</td>
+        </tr>
+
+       <!-- Permission Modal -->
+<div class="modal fade" id="permissionModal{{ role.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Manage Permissions - {{ role.role_name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" class="confirm-form" action="{% url 'admin_role_permission' role.id %}">
+        {% csrf_token %}
+
+       <div class="modal-body">
+         <div class="permission-modal-grid">
+           {% for permission in permissions %}
+           <label class="permission-card-option">
+             <input
+               type="checkbox"
+               name="permissions"
+               value="{{ permission.id }}"
+               {% if permission in role.permissions.all %}checked{% endif %}
+             />
+       
+             <div class="permission-card-icon">
+               <i class="bi bi-shield-check"></i>
+             </div>
+       
+             <div class="permission-card-text">
+               <h6>{{ permission.permission_name }}</h6>
+               <small>Allow this role to access this feature</small>
+             </div>
+       
+             <span class="permission-card-check">
+               <i class="bi bi-check-lg"></i>
+             </span>
+           </label>
+           {% endfor %}
+         </div>
+       </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Cancel
+          </button>
+
+          <button type="submit" class="product-submit-btn">
+            <i class="bi bi-shield-check me-2"></i>
+            Save Permissions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Role Modal -->
+<div class="modal fade" id="editRole{{ role.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" class="confirm-form" action="{% url 'admin_edit_role' role.id %}">
+        {% csrf_token %}
+
+        <div class="modal-body">
+          <label class="form-label fw-semibold">Role Name</label>
+          <input
+            type="text"
+            name="role_name"
+            value="{{ role.role_name }}"
+            class="form-control product-input"
+            required
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Cancel
+          </button>
+
+          <button type="submit" class="product-submit-btn">
+            <i class="bi bi-check-circle me-2"></i>
+            Update Role
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            No roles found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+<!-- Add Role Modal -->
+<div class="modal fade" id="addRoleModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content admin-view-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="POST" class="confirm-form" action="{% url 'admin_add_role' %}">
+        {% csrf_token %}
+
+        <div class="modal-body">
+          <label class="form-label fw-semibold">Role Name</label>
+          <input
+            type="text"
+            name="role_name"
+            class="form-control product-input"
+            placeholder="Enter role name"
+            required
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Cancel
+          </button>
+
+          <button type="submit" class="product-submit-btn">
+            <i class="bi bi-plus-circle me-2"></i>
+            Save Role
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+{% endblock %}
