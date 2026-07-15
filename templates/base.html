@@ -25,17 +25,10 @@
     <link rel="stylesheet" href="{% static 'css/website.css' %}" />
   </head>
 
-  <body>
-    <!-- ================================= -->
-    <!-- Announcement Bar -->
-    <!-- ================================= -->
-
-    <div class="bg-dark text-light py-2">
-      <div class="container text-center">
-        ✨ Free Shipping on Orders Above ₹999
-      </div>
-    </div>
-
+<body
+  data-authenticated="{% if request.user.is_authenticated %}true{% else %}false{% endif %}"
+  data-login-url="{% url 'login_user' %}"
+>
     <!-- ================================= -->
     <!-- Navbar -->
     <!-- ================================= -->
@@ -91,24 +84,50 @@
 
           <div class="d-flex align-items-center gap-3">
             <!-- Search -->
-            <a href="#" class="header-icon search-icon">
-              <i class="bi bi-search"></i>
-            </a>
-
+<button
+  type="button"
+  class="header-icon search-icon"
+  id="openHeaderSearch"
+  aria-label="Search products"
+>
+  <i class="bi bi-search"></i>
+</button>
             {% if user.is_authenticated %}
 
             <!-- Wishlist -->
-            <a
-              href="{% url 'wishlist_page' %}"
+            
+
+{% if user.is_authenticated %}
+
+<a href="{% url 'wishlist_page' %}"
               class="header-icon wishlist-icon"
             >
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+
               <i class="bi bi-heart-fill"></i>
             </a>
 
             <!-- Cart -->
-            <a href="{% url 'cart' %}" class="header-icon cart-icon">
-              <i class="bi bi-cart3"></i>
+
+            {% if user.is_authenticated %}
+
+ <a href="{% url 'cart' %}" class="header-icon cart-icon">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+<i class="bi bi-cart3"></i>
             </a>
+            
 
             <div class="profile-dropdown">
               <button
@@ -120,11 +139,32 @@
               </button>
 
               <div class="profile-menu" id="profileMenu">
-                <a href="{% url 'my_profile' %}">
+                {% if user.is_authenticated %}
+
+<a href="{% url 'my_profile' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
                   <i class="bi bi-person"></i> My Profile
                 </a>
 
-                <a href="#"> <i class="bi bi-bag-check"></i> My Orders </a>
+               {% if user.is_authenticated %}
+
+<a href="{% url 'my_orders' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+                    <i class="bi bi-bag-check"></i>
+                    My Orders
+                </a>
 
                 <a href="#"> <i class="bi bi-bar-chart"></i> Reports </a>
 
@@ -167,51 +207,536 @@
 
     {% block slider %} {% endblock %} {% block content %} {% endblock %}
 
-    <!-- ================================= -->
-    <!-- Footer -->
-    <!-- ================================= -->
+<!-- ===================================================== -->
+<!-- VELORA FOOTER -->
+<!-- ===================================================== -->
 
-    <footer class="bg-dark text-white py-5">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-4">
-            <h3>Velora</h3>
+<footer class="velora-footer">
 
-            <p>Premium Shopping Experience</p>
-          </div>
+  <div class="container">
 
-          <div class="col-md-4">
-            <h5>Quick Links</h5>
+    <div class="footer-main">
 
-            <ul class="list-unstyled">
-              <li>
-                <a href="{% url 'home_page' %}" class="text-white"> Home </a>
-              </li>
+      <!-- Brand -->
 
-              <li>
-                <a href="{% url 'shop_page' %}" class="text-white"> Shop </a>
-              </li>
+      <div class="footer-brand">
 
-              <li>
-                <a href="{% url 'blog_page' %}" class="text-white"> Blog </a>
-              </li>
-            </ul>
-          </div>
+        <a
+          href="{% url 'home_page' %}"
+          class="footer-logo"
+        >
+          <span class="footer-logo-icon">
+            <i class="bi bi-bag-heart-fill"></i>
+          </span>
 
-          <div class="col-md-4">
-            <h5>Contact</h5>
+          <span>
+            Velora
+          </span>
+        </a>
 
-            <p>support@velora.com</p>
 
-            <p>+91 9876543210</p>
-          </div>
+        <p>
+          Discover fashion, footwear and lifestyle products
+          designed to make everyday shopping simple, stylish
+          and enjoyable.
+        </p>
+
+
+        <div class="footer-social-links">
+
+          <a
+            href="#"
+            aria-label="Facebook"
+          >
+            <i class="bi bi-facebook"></i>
+          </a>
+
+
+          <a
+            href="#"
+            aria-label="Instagram"
+          >
+            <i class="bi bi-instagram"></i>
+          </a>
+
+
+          <a
+            href="#"
+            aria-label="Twitter"
+          >
+            <i class="bi bi-twitter-x"></i>
+          </a>
+
+
+          <a
+            href="#"
+            aria-label="LinkedIn"
+          >
+            <i class="bi bi-linkedin"></i>
+          </a>
+
         </div>
 
-        <hr />
-
-        <div class="text-center">© 2026 Velora. All Rights Reserved.</div>
       </div>
-    </footer>
+
+
+      <!-- Quick links -->
+
+      <div class="footer-column">
+
+        <h4>
+          Quick Links
+        </h4>
+
+
+        <ul>
+
+          <li>
+            <a href="{% url 'home_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Home
+            </a>
+          </li>
+
+
+          <li>
+            <a href="{% url 'shop_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Shop
+            </a>
+          </li>
+
+
+          <li>
+            <a href="{% url 'categories_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Categories
+            </a>
+          </li>
+
+
+          <li>
+            <a href="{% url 'deals_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Deals
+            </a>
+          </li>
+
+
+          <li>
+            <a href="{% url 'blog_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Blog
+            </a>
+          </li>
+
+        </ul>
+
+      </div>
+
+
+      <!-- Customer help -->
+
+      <div class="footer-column">
+
+        <h4>
+          Customer Help
+        </h4>
+
+
+        <ul>
+
+          <li>
+            {% if user.is_authenticated %}
+
+<a href="{% url 'my_profile' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+              <i class="bi bi-chevron-right"></i>
+              My Account
+            </a>
+          </li>
+
+
+          <li>
+            {% if user.is_authenticated %}
+
+<a href="{% url 'my_orders' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+              <i class="bi bi-chevron-right"></i>
+              My Orders
+            </a>
+          </li>
+
+
+          <li>
+            {% if user.is_authenticated %}
+
+<a href="{% url 'wishlist_page' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+              <i class="bi bi-chevron-right"></i>
+              Wishlist
+            </a>
+          </li>
+
+
+          <li>
+            {% if user.is_authenticated %}
+
+<a href="{% url 'cart' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+              <i class="bi bi-chevron-right"></i>
+              Shopping Cart
+            </a>
+          </li>
+        
+
+
+          <li>
+            <a href="{% url 'contact_page' %}">
+              <i class="bi bi-chevron-right"></i>
+              Contact Support
+            </a>
+          </li>
+
+        </ul>
+
+      </div>
+
+
+      <!-- Contact information -->
+
+      <div class="footer-column footer-contact-column">
+
+        <h4>
+          Contact Us
+        </h4>
+
+
+        <div class="footer-contact-item">
+
+          <span>
+            <i class="bi bi-geo-alt"></i>
+          </span>
+
+
+          <div>
+
+            <strong>
+              Our Location
+            </strong>
+
+            <small>
+              123 Velora Street, New Delhi, India
+            </small>
+
+          </div>
+
+        </div>
+
+
+        <div class="footer-contact-item">
+
+          <span>
+            <i class="bi bi-envelope"></i>
+          </span>
+
+
+          <div>
+
+            <strong>
+              Email Support
+            </strong>
+
+            <a href="mailto:support@velora.com">
+              support@velora.com
+            </a>
+
+          </div>
+
+        </div>
+
+
+        <div class="footer-contact-item">
+
+          <span>
+            <i class="bi bi-telephone"></i>
+          </span>
+
+
+          <div>
+
+            <strong>
+              Call Us
+            </strong>
+
+            <a href="tel:+919876543210">
+              +91 98765 43210
+            </a>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Newsletter -->
+
+    <div class="footer-newsletter">
+
+      <div>
+
+        <span>
+          Stay Updated
+        </span>
+
+        <h3>
+          Get Offers And New Arrivals
+        </h3>
+
+        <p>
+          Subscribe for product updates, shopping tips and
+          exclusive Velora offers.
+        </p>
+
+      </div>
+
+
+      <form
+        class="footer-newsletter-form"
+        id="footerNewsletterForm"
+      >
+
+        <i class="bi bi-envelope"></i>
+
+        <input
+          type="email"
+          placeholder="Enter your email address"
+          required
+        >
+
+
+        <button type="submit">
+          Subscribe
+          <i class="bi bi-send"></i>
+        </button>
+
+      </form>
+
+    </div>
+
+
+    <!-- Bottom footer -->
+
+    <div class="footer-bottom">
+
+      <p>
+        © {% now "Y" %} Velora. All rights reserved.
+      </p>
+
+
+      <div class="footer-bottom-links">
+
+        <a href="#">
+          Privacy Policy
+        </a>
+
+        <a href="#">
+          Terms & Conditions
+        </a>
+
+        <a href="#">
+          Shipping Policy
+        </a>
+
+      </div>
+
+
+      <div class="footer-payment-methods">
+
+        <span>
+          <i class="bi bi-credit-card"></i>
+        </span>
+
+        <span>
+          <i class="bi bi-wallet2"></i>
+        </span>
+
+        <span>
+          <i class="bi bi-cash-stack"></i>
+        </span>
+
+        <span>
+          <i class="bi bi-shield-check"></i>
+        </span>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</footer>
+<!-- =====================================================
+     HEADER PRODUCT SEARCH
+====================================================== -->
+
+<div
+  class="header-search-overlay"
+  id="headerSearchOverlay"
+  data-search-url="{% url 'header_product_search' %}"
+  hidden
+>
+  <div class="header-search-modal">
+
+    <div class="header-search-top">
+
+      <div>
+        <span>
+          <i class="bi bi-search"></i>
+          Velora Search
+        </span>
+
+        <h2>Search Products</h2>
+
+        <p>
+          Search by product name, category or description.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="header-search-close"
+        id="closeHeaderSearch"
+        aria-label="Close search"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+    </div>
+
+
+    <form
+      class="header-search-form"
+      id="headerSearchForm"
+      action="{% url 'shop_page' %}"
+      method="GET"
+    >
+
+      <div class="header-search-input-box">
+
+        <i class="bi bi-search"></i>
+
+        <input
+          type="search"
+          name="q"
+          id="headerSearchInput"
+          placeholder="Search shirts, shoes, products..."
+          autocomplete="off"
+        >
+
+        <button
+          type="button"
+          class="header-search-clear d-none"
+          id="clearHeaderSearch"
+          aria-label="Clear search"
+        >
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
+
+      </div>
+
+      <button
+        type="submit"
+        class="header-search-submit"
+      >
+        Search All
+
+        <i class="bi bi-arrow-right"></i>
+      </button>
+
+    </form>
+
+
+    <div
+      class="header-search-loading d-none"
+      id="headerSearchLoading"
+    >
+      <span class="spinner-border spinner-border-sm"></span>
+      Searching products...
+    </div>
+
+
+    <div
+      class="header-search-results"
+      id="headerSearchResults"
+    >
+
+      <div class="header-search-start-state">
+
+        <span>
+          <i class="bi bi-bag-heart"></i>
+        </span>
+
+        <h3>Find Your Next Favourite</h3>
+
+        <p>
+          Start typing to discover Velora products.
+        </p>
+      </div>
+
+    </div>
+
+
+    <div class="header-search-footer">
+
+      <span>
+        <kbd>↑</kbd>
+        <kbd>↓</kbd>
+        Navigate
+      </span>
+
+      <span>
+        <kbd>Enter</kbd>
+        Open
+      </span>
+
+      <span>
+        <kbd>Esc</kbd>
+        Close
+      </span>
+
+    </div>
+
+  </div>
+</div>
+    
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Bootstrap JS -->

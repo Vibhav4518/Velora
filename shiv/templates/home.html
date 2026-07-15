@@ -3,269 +3,763 @@
 
 {% block content %}
 
-<section class="hero py-5">
+<!-- =====================================
+     HERO SECTION
+===================================== -->
+
+<section class="velora-home-hero">
+
   <div class="container">
-    <div class="row align-items-center g-5">
-      <div class="col-lg-6 text-center text-lg-start">
-        <span class="badge bg-primary px-3 py-2 mb-3">
-          Premium Shopping
-        </span>
 
-        <h1 class="display-4 fw-bold">
-          Discover Fashion That Defines You
-        </h1>
+    <div class="velora-hero-box">
 
-        <p class="lead my-4 text-muted">
-          Shop premium collections curated for modern lifestyles.
-        </p>
+      <div class="row align-items-center g-5">
 
-        <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
-          <a href="{% url 'shop_page' %}" class="btn btn-primary btn-lg rounded-pill px-4">
-            Shop Now
-          </a>
+        <!-- Hero content -->
 
-          <a href="{% url 'categories_page' %}" class="btn btn-outline-dark btn-lg rounded-pill px-4">
-            Explore
-          </a>
-        </div>
-      </div>
+        <div class="col-lg-6">
 
-      <div class="col-lg-6 text-center">
-        <img
-          src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b"
-          class="img-fluid rounded-4 shadow"
-          alt="Velora Fashion"
-        />
-      </div>
-    </div>
-  </div>
-</section>
+          <div class="velora-hero-content">
 
-<section class="py-5">
-  <div class="container">
-    <div class="text-center mb-5">
-      <h2 class="fw-bold">Shop By Category</h2>
-      <p class="text-muted">Explore products by your favorite categories.</p>
-    </div>
+            <span class="velora-hero-badge">
 
-    <div class="row g-4">
-      {% for category in categories %}
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card home-category-card">
-  <div class="home-category-icon">
-    {% if category.category_image %}
-      <img src="{{ category.category_image.url }}" alt="{{ category.category_name }}">
-    {% else %}
-      <i class="bi bi-grid"></i>
-    {% endif %}
-  </div>
+              <i class="bi bi-stars"></i>
 
-  <h5>{{ category.category_name }}</h5>
-  <p>{{ category.product_count }} Products</p>
-</div>
-      </div>
-      {% empty %}
-      <div class="col-12 text-center text-muted">
-        No categories available.
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+              Premium Shopping Experience
 
-<section class="py-5 bg-light">
-  <div class="container">
-    <div class="text-center mb-5">
-      <h2 class="fw-bold">Featured Collection</h2>
-      <p class="text-muted">Handpicked products for you.</p>
-    </div>
+            </span>
 
-    <div class="row g-4">
-      {% for product in featured_products %}
-      <div class="col-lg-3 col-md-6">
-        <div class="card product-card h-100">
-          <a href="{% url 'product_details' product.id %}">
-            <div class="product-image-wrapper">
-              {% if product.images.first %}
-              <img
-                src="{{ product.images.first.image.url }}"
-                class="product-image"
-                alt="{{ product.product_name }}"
-              />
-              {% else %}
-              <img
-                src="{% static 'images/default-product.png' %}"
-                class="product-image"
-                alt="No Image"
-              />
-              {% endif %}
-            </div>
-          </a>
 
-          <div class="card-body">
-            <small class="text-primary fw-semibold">
-              {{ product.category.category_name }}
-            </small>
+            <h1>
 
-            <h5 class="fw-bold mt-2">{{ product.product_name }}</h5>
+              Discover Fashion
 
-            <p class="text-muted small">
-              {{ product.short_description|truncatechars:55 }}
+              <span>
+                That Defines You
+              </span>
+
+            </h1>
+
+
+            <p>
+              Explore premium products, modern collections and everyday
+              essentials selected for your lifestyle.
             </p>
 
-            <h5 class="fw-bold">₹{{ product.price }}</h5>
 
-            <div class="d-flex gap-2 mt-3">
-    <button class="add-cart-btn"
-        data-url="{% url 'add_to_cart' product.id %}">
-    Add to Cart
-</button>
+            <div class="velora-hero-actions">
 
-    <button class="wishlist-btn"
-        data-url="{% url 'add_to_wishlist' product.id %}">
-    <i class="bi bi-heart"></i>
-</button>
-</div>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="col-12 text-center text-muted">
-        No products available.
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+              <a
+                href="{% url 'shop_page' %}"
+                class="velora-primary-btn"
+              >
+                Shop Now
 
-<section class="py-5">
-  <div class="container">
-    <div class="row g-4">
-      <div class="col-lg-6">
-        <div class="p-5 rounded-4 text-white bg-primary shadow">
-          <h2 class="fw-bold">Summer Sale</h2>
-          <p class="mb-4">Up To 50% Off On Selected Products</p>
-          <a href="{% url 'deals_page' %}" class="btn btn-light rounded-pill px-4">
-            Shop Now
-          </a>
-        </div>
-      </div>
+                <i class="bi bi-arrow-right"></i>
+              </a>
 
-      <div class="col-lg-6">
-        <div class="p-5 rounded-4 text-white bg-dark shadow">
-          <h2 class="fw-bold">Luxury Collection</h2>
-          <p class="mb-4">Exclusive Premium Arrivals</p>
-          <a href="{% url 'shop_page' %}" class="btn btn-light rounded-pill px-4">
-            Explore
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="py-5 bg-light">
-  <div class="container">
-    <div class="text-center mb-5">
-      <h2 class="fw-bold">New Arrivals</h2>
-      <p class="text-muted">Freshly added products.</p>
-    </div>
+              <a
+                href="{% url 'categories_page' %}"
+                class="velora-outline-btn"
+              >
+                Explore Categories
+              </a>
 
-    <div class="row g-4">
-      {% for product in new_arrivals %}
-      <div class="col-lg-4 col-md-6">
-        <div class="card product-card h-100">
-          <a href="{% url 'product_details' product.id %}">
-            <div class="product-image-wrapper">
-              {% if product.images.first %}
-              <img src="{{ product.images.first.image.url }}" class="product-image">
-              {% else %}
-              <img src="{% static 'images/default-product.png' %}" class="product-image">
-              {% endif %}
             </div>
+
+
+            <div class="velora-hero-features">
+
+              <div>
+
+                <i class="bi bi-truck"></i>
+
+                <span>
+                  Fast Delivery
+                </span>
+
+              </div>
+
+
+              <div>
+
+                <i class="bi bi-shield-check"></i>
+
+                <span>
+                  Secure Payment
+                </span>
+
+              </div>
+
+
+              <div>
+
+                <i class="bi bi-arrow-repeat"></i>
+
+                <span>
+                  Easy Returns
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Hero image -->
+
+        <div class="col-lg-6">
+
+          <div class="velora-hero-image-box">
+
+            <img
+              src="{% static 'images/home-hero-bg.png' %}"
+              alt="Velora Shopping"
+              class="velora-hero-image"
+            >
+
+
+            <div class="velora-floating-card velora-floating-top">
+
+              <i class="bi bi-bag-check"></i>
+
+              <div>
+
+                <strong>
+                  Premium Quality
+                </strong>
+
+                <small>
+                  Curated products
+                </small>
+
+              </div>
+
+            </div>
+
+
+            <div class="velora-floating-card velora-floating-bottom">
+
+              <i class="bi bi-lightning-charge"></i>
+
+              <div>
+
+                <strong>
+                  Latest Collection
+                </strong>
+
+                <small>
+                  Fresh arrivals
+                </small>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================
+     CATEGORIES
+===================================== -->
+
+<section class="velora-home-section">
+
+  <div class="container">
+
+    <div class="velora-section-heading">
+
+      <div>
+
+        <span>
+          Browse Collection
+        </span>
+
+        <h2>
+          Shop By Category
+        </h2>
+
+        <p>
+          Find the right products from your favourite categories.
+        </p>
+
+      </div>
+
+
+      <a
+        href="{% url 'categories_page' %}"
+        class="velora-section-link"
+      >
+        View All Categories
+
+        <i class="bi bi-arrow-right"></i>
+      </a>
+
+    </div>
+
+
+    <div class="row g-3">
+
+      {% for category in categories %}
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+
+          <a
+            href="{% url 'shop_page' %}?category={{ category.id }}"
+            class="velora-category-card"
+          >
+
+            <div class="velora-category-media">
+
+              {% if category.category_image %}
+
+                <img
+                  src="{{ category.category_image.url }}"
+                  alt="{{ category.category_name }}"
+                  loading="lazy"
+                >
+
+              {% else %}
+
+                <div class="velora-category-placeholder">
+
+                  <i class="bi bi-grid"></i>
+
+                </div>
+
+              {% endif %}
+
+            </div>
+
+
+            <div class="velora-category-info">
+
+              <div>
+
+                <h4>
+                  {{ category.category_name }}
+                </h4>
+
+                <p>
+
+                  {{ category.product_count }}
+
+                  Product{{ category.product_count|pluralize }}
+
+                </p>
+
+              </div>
+
+
+              <span>
+
+                <i class="bi bi-arrow-up-right"></i>
+
+              </span>
+
+            </div>
+
           </a>
 
-          <div class="card-body">
-            <h5 class="fw-bold">{{ product.product_name }}</h5>
-            <p class="text-muted">{{ product.short_description|truncatechars:70 }}</p>
-            <h5 class="fw-bold">₹{{ product.price }}</h5>
-
-            <a href="{% url 'product_details' product.id %}" class="btn btn-primary rounded-pill px-4">
-              Buy Now
-            </a>
-          </div>
         </div>
-      </div>
+
+
       {% empty %}
-      <div class="col-12 text-center text-muted">
-        No new arrivals yet.
-      </div>
+
+        <div class="col-12">
+
+          <div class="velora-empty-box">
+
+            <i class="bi bi-grid"></i>
+
+            <h3>
+              No categories available
+            </h3>
+
+            <p>
+              Categories will appear here after they are added.
+            </p>
+
+          </div>
+
+        </div>
+
       {% endfor %}
+
     </div>
+
   </div>
+
 </section>
 
-<section class="py-5 text-white bg-danger">
-  <div class="container text-center">
-    <h2 class="fw-bold">Flash Sale Ends In</h2>
 
-    <div class="display-5 fw-bold my-3">
-      <span id="days">00</span> :
-      <span id="hours">00</span> :
-      <span id="minutes">00</span> :
-      <span id="seconds">00</span>
-    </div>
-  </div>
-</section>
+<!-- =====================================
+     FEATURED PRODUCTS
+===================================== -->
 
-<section class="py-5">
+<section class="velora-home-section velora-section-soft">
+
   <div class="container">
-    <div class="text-center mb-5">
-      <h2 class="fw-bold">Why Shop With Velora?</h2>
+
+    <div class="velora-section-heading">
+
+      <div>
+
+        <span>
+          Selected For You
+        </span>
+
+        <h2>
+          Featured Collection
+        </h2>
+
+        <p>
+          Explore some of our latest and most popular products.
+        </p>
+
+      </div>
+
+
+      <a
+        href="{% url 'shop_page' %}"
+        class="velora-section-link"
+      >
+        View All Products
+
+        <i class="bi bi-arrow-right"></i>
+      </a>
+
     </div>
+
 
     <div class="row g-4">
-      <div class="col-md-4">
-        <div class="card p-4 text-center h-100">
-          <i class="bi bi-truck fs-1 text-primary mb-3"></i>
-          <h5>Fast Delivery</h5>
-          <p class="text-muted mb-0">Quick and reliable delivery across India.</p>
-        </div>
-      </div>
 
-      <div class="col-md-4">
-        <div class="card p-4 text-center h-100">
-          <i class="bi bi-shield-check fs-1 text-primary mb-3"></i>
-          <h5>Secure Payment</h5>
-          <p class="text-muted mb-0">Safe checkout with trusted payment options.</p>
-        </div>
-      </div>
+      {% for product in featured_products %}
 
-      <div class="col-md-4">
-        <div class="card p-4 text-center h-100">
-          <i class="bi bi-arrow-repeat fs-1 text-primary mb-3"></i>
-          <h5>Easy Returns</h5>
-          <p class="text-muted mb-0">Simple returns and customer-friendly support.</p>
+        <div class="col-xl-3 col-lg-4 col-md-6">
+
+          {% include "components/productCard.html" with card_product=product %}
+
         </div>
-      </div>
+
+
+      {% empty %}
+
+        <div class="col-12">
+
+          <div class="velora-empty-box">
+
+            <i class="bi bi-box-seam"></i>
+
+            <h3>
+              No featured products found
+            </h3>
+
+            <p>
+              Products will appear here after they are added.
+            </p>
+
+          </div>
+
+        </div>
+
+      {% endfor %}
+
     </div>
+
   </div>
+
 </section>
 
-<section class="py-5 bg-dark text-white">
-  <div class="container text-center">
-    <h2 class="fw-bold">Subscribe To Velora</h2>
-    <p>Get updates on new products and exclusive offers.</p>
 
-    <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="input-group">
-          <input type="email" class="form-control" placeholder="Email Address">
-          <button class="btn btn-primary px-4">Subscribe</button>
+<!-- =====================================
+     PROMOTIONAL BANNERS
+===================================== -->
+
+<section class="velora-home-section">
+
+  <div class="container">
+
+    <div class="row g-4">
+
+      <div class="col-lg-7">
+
+        <div class="velora-promo-card velora-promo-blue">
+
+          <div>
+
+            <span>
+              Limited-Time Collection
+            </span>
+
+            <h2>
+              Upgrade Your Everyday Style
+            </h2>
+
+            <p>
+              Discover curated fashion and lifestyle products at great prices.
+            </p>
+
+
+            <a href="{% url 'shop_page' %}">
+
+              Shop Collection
+
+              <i class="bi bi-arrow-right"></i>
+
+            </a>
+
+          </div>
+
+
+          <i class="bi bi-bag-heart velora-promo-icon"></i>
+
         </div>
+
       </div>
+
+
+      <div class="col-lg-5">
+
+        <div class="velora-promo-card velora-promo-dark">
+
+          <div>
+
+            <span>
+              Fresh Arrivals
+            </span>
+
+            <h2>
+              New Season Essentials
+            </h2>
+
+            <p>
+              Explore products recently added to Velora.
+            </p>
+
+
+            <a href="#new-arrivals">
+
+              View Arrivals
+
+              <i class="bi bi-arrow-down"></i>
+
+            </a>
+
+          </div>
+
+
+          <i class="bi bi-stars velora-promo-icon"></i>
+
+        </div>
+
+      </div>
+
     </div>
+
   </div>
+
+</section>
+
+
+<!-- =====================================
+     NEW ARRIVALS
+===================================== -->
+
+<section
+  class="velora-home-section velora-section-soft"
+  id="new-arrivals"
+>
+
+  <div class="container">
+
+    <div class="velora-section-heading">
+
+      <div>
+
+        <span>
+          Just Added
+        </span>
+
+        <h2>
+          New Arrivals
+        </h2>
+
+        <p>
+          Fresh products recently added to the Velora store.
+        </p>
+
+      </div>
+
+
+      <a
+        href="{% url 'shop_page' %}"
+        class="velora-section-link"
+      >
+        Browse Shop
+
+        <i class="bi bi-arrow-right"></i>
+      </a>
+
+    </div>
+
+
+    <div class="row g-4">
+
+      {% for product in new_arrivals %}
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+
+          {% include "components/productCard.html" with card_product=product %}
+
+        </div>
+
+
+      {% empty %}
+
+        <div class="col-12">
+
+          <div class="velora-empty-box">
+
+            <i class="bi bi-stars"></i>
+
+            <h3>
+              No new arrivals yet
+            </h3>
+
+            <p>
+              Recently added products will appear here.
+            </p>
+
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================
+     DEALS PROMOTION
+===================================== -->
+
+<section class="velora-flash-section">
+
+  <div class="container">
+
+    <div class="velora-flash-card">
+
+      <div>
+
+        <span>
+          Limited Time Offers
+        </span>
+
+        <h2>
+          Discover Velora Deals
+        </h2>
+
+        <p>
+          Explore selected products with special discounts before
+          each offer expires.
+        </p>
+
+      </div>
+
+
+      <div class="velora-flash-feature-list">
+
+        <div>
+
+          <i class="bi bi-lightning-charge-fill"></i>
+
+          <span>
+            Limited-time prices
+          </span>
+
+        </div>
+
+
+        <div>
+
+          <i class="bi bi-tag-fill"></i>
+
+          <span>
+            Selected products
+          </span>
+
+        </div>
+
+
+        <div>
+
+          <i class="bi bi-clock"></i>
+
+          <span>
+            Offers updated regularly
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <a href="{% url 'deals_page' %}">
+
+        View Deals
+
+        <i class="bi bi-lightning-charge"></i>
+
+      </a>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================
+     WHY VELORA
+===================================== -->
+
+<section class="velora-home-section">
+
+  <div class="container">
+
+    <div class="velora-centered-heading">
+
+      <span>
+        Why Choose Us
+      </span>
+
+      <h2>
+        Shopping Made Simple
+      </h2>
+
+      <p>
+        Everything you need for a smooth and reliable shopping experience.
+      </p>
+
+    </div>
+
+
+    <div class="row g-4">
+
+      <div class="col-lg-3 col-md-6">
+
+        <div class="velora-benefit-card">
+
+          <div>
+
+            <i class="bi bi-truck"></i>
+
+          </div>
+
+          <h4>
+            Fast Delivery
+          </h4>
+
+          <p>
+            Quick and reliable delivery for your Velora orders.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="col-lg-3 col-md-6">
+
+        <div class="velora-benefit-card">
+
+          <div>
+
+            <i class="bi bi-shield-check"></i>
+
+          </div>
+
+          <h4>
+            Secure Checkout
+          </h4>
+
+          <p>
+            Protected checkout with trusted payment methods.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="col-lg-3 col-md-6">
+
+        <div class="velora-benefit-card">
+
+          <div>
+
+            <i class="bi bi-arrow-repeat"></i>
+
+          </div>
+
+          <h4>
+            Easy Returns
+          </h4>
+
+          <p>
+            A convenient and customer-friendly return process.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="col-lg-3 col-md-6">
+
+        <div class="velora-benefit-card">
+
+          <div>
+
+            <i class="bi bi-headset"></i>
+
+          </div>
+
+          <h4>
+            Customer Support
+          </h4>
+
+          <p>
+            Helpful assistance whenever you need support.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
 </section>
 
 {% endblock %}

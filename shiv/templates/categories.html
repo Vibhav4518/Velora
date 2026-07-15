@@ -1,136 +1,404 @@
+{% extends "base.html" %}
+{% load static %}
 
- {% extends "base.html" %} 
+{% block content %}
 
- {% block content %}
- 
-  <!-- Categories Section -->
+<section
+  class="category-page"
+  id="categoriesPage"
+>
 
-<section class="categories py-5">
   <div class="container">
-    <div class="text-center mb-5">
-      <h2 class="fw-bold">Shop By Category</h2>
 
-      <p class="text-muted">
-        Discover products tailored to your style and lifestyle.
+    <!-- ================================================= -->
+    <!-- CATEGORY HERO -->
+    <!-- ================================================= -->
+
+    <div class="category-page-header">
+
+      <div class="category-header-content">
+
+        <span class="category-header-label">
+
+          <i class="bi bi-grid"></i>
+
+          Velora Collections
+
+        </span>
+
+
+        <h1>
+          Shop By Category
+        </h1>
+
+
+        <p>
+          Discover products tailored to your style and lifestyle.
+        </p>
+
+      </div>
+
+
+      <a
+        href="{% url 'shop_page' %}"
+        class="category-shop-btn"
+      >
+
+        View All Products
+
+        <i class="bi bi-arrow-right"></i>
+
+      </a>
+
+
+      <span class="category-header-shape shape-one"></span>
+      <span class="category-header-shape shape-two"></span>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- CATEGORY TOOLBAR -->
+    <!-- ================================================= -->
+
+    {% if categories %}
+
+      <div class="category-toolbar">
+
+        <div class="category-search-box">
+
+          <i class="bi bi-search"></i>
+
+
+          <input
+            type="search"
+            id="categorySearchInput"
+            placeholder="Search categories..."
+            autocomplete="off"
+          >
+
+
+          <button
+            type="button"
+            id="clearCategorySearch"
+            class="category-search-clear d-none"
+            aria-label="Clear category search"
+          >
+
+            <i class="bi bi-x-lg"></i>
+
+          </button>
+
+        </div>
+
+
+        <div class="category-result-count">
+
+          <span class="category-result-icon">
+
+            <i class="bi bi-collection"></i>
+
+          </span>
+
+
+          <div>
+
+            <strong id="visibleCategoryCount">
+              {{ categories|length }}
+            </strong>
+
+            <small>
+              Categor{{ categories|length|pluralize:"y,ies" }}
+            </small>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- CATEGORY GRID -->
+    <!-- ================================================= -->
+
+    <div
+      class="row g-3 category-grid"
+      id="categoryGrid"
+    >
+
+      {% for category in categories %}
+
+        <div
+          class="col-xl-2 col-lg-3 col-md-4 col-sm-6 category-grid-column"
+          data-category-card
+          data-name="{{ category.category_name|lower }}"
+        >
+
+          <a
+            href="{% url 'shop_page' %}?category={{ category.id }}"
+            class="compact-category-card"
+          >
+
+            <!-- Category image -->
+
+            <div class="compact-category-image">
+
+              {% if category.category_image %}
+
+                <img
+                  src="{{ category.category_image.url }}"
+                  alt="{{ category.category_name }}"
+                  loading="lazy"
+                >
+
+              {% else %}
+
+                <div class="compact-category-placeholder">
+
+                  <i class="bi bi-grid"></i>
+
+                </div>
+
+              {% endif %}
+
+
+              <span class="compact-category-count">
+
+                {{ category.product_count }}
+
+              </span>
+
+            </div>
+
+
+            <!-- Category content -->
+
+            <div class="compact-category-content">
+
+              <div>
+
+                <span>
+                  Explore
+                </span>
+
+
+                <h3>
+                  {{ category.category_name }}
+                </h3>
+
+
+                <p>
+
+                  {{ category.product_count }}
+
+                  Product{{ category.product_count|pluralize }}
+
+                </p>
+
+              </div>
+
+
+              <span class="compact-category-arrow">
+
+                <i class="bi bi-arrow-up-right"></i>
+
+              </span>
+
+            </div>
+
+          </a>
+
+        </div>
+
+
+      {% empty %}
+
+        <div class="col-12">
+
+          <div class="empty-category-box">
+
+            <div class="empty-category-icon">
+
+              <i class="bi bi-grid"></i>
+
+            </div>
+
+
+            <h3>
+              No Categories Found
+            </h3>
+
+
+            <p>
+              Categories will appear here after they are added.
+            </p>
+
+
+            <a href="{% url 'shop_page' %}">
+
+              Browse Products
+
+              <i class="bi bi-arrow-right"></i>
+
+            </a>
+
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- SEARCH EMPTY STATE -->
+    <!-- ================================================= -->
+
+    <div
+      class="empty-category-box category-search-empty d-none"
+      id="categorySearchEmpty"
+    >
+
+      <div class="empty-category-icon">
+
+        <i class="bi bi-search"></i>
+
+      </div>
+
+
+      <h3>
+        No Matching Categories
+      </h3>
+
+
+      <p>
+        Try searching with another category name.
       </p>
+
+
+      <button
+        type="button"
+        id="resetCategorySearch"
+      >
+
+        Reset Search
+
+        <i class="bi bi-arrow-counterclockwise"></i>
+
+      </button>
+
     </div>
 
-    <div class="row g-4">
-      <!-- Category -->
 
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-bag-heart"></i>
-          </div>
+    <!-- ================================================= -->
+    <!-- CATEGORY BENEFITS -->
+    <!-- ================================================= -->
 
-          <h5>Women's Fashion</h5>
+    <div class="category-benefit-grid">
 
-          <p>120+ Products</p>
+      <div class="category-benefit-card">
+
+        <span>
+
+          <i class="bi bi-grid"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Organized Collections
+          </strong>
+
+          <small>
+            Find products easily
+          </small>
+
         </div>
+
       </div>
 
-      <!-- Category -->
 
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-person-badge"></i>
-          </div>
+      <div class="category-benefit-card">
 
-          <h5>Men's Fashion</h5>
+        <span>
 
-          <p>95+ Products</p>
+          <i class="bi bi-shield-check"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Genuine Products
+          </strong>
+
+          <small>
+            Quality guaranteed
+          </small>
+
         </div>
+
       </div>
 
-      <!-- Category -->
 
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-phone"></i>
-          </div>
+      <div class="category-benefit-card">
 
-          <h5>Electronics</h5>
+        <span>
 
-          <p>210+ Products</p>
+          <i class="bi bi-truck"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Fast Delivery
+          </strong>
+
+          <small>
+            Quick order dispatch
+          </small>
+
         </div>
+
       </div>
 
-      <!-- Category -->
 
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-gem"></i>
-          </div>
+      <div class="category-benefit-card">
 
-          <h5>Beauty</h5>
+        <span>
 
-          <p>85+ Products</p>
+          <i class="bi bi-heart"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Save Favourites
+          </strong>
+
+          <small>
+            Build your wishlist
+          </small>
+
         </div>
+
       </div>
 
-      <!-- Category -->
-
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-watch"></i>
-          </div>
-
-          <h5>Accessories</h5>
-
-          <p>70+ Products</p>
-        </div>
-      </div>
-
-      <!-- Category -->
-
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-house-heart"></i>
-          </div>
-
-          <h5>Home Decor</h5>
-
-          <p>150+ Products</p>
-        </div>
-      </div>
-
-      <!-- Category -->
-
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-bicycle"></i>
-          </div>
-
-          <h5>Sports</h5>
-
-          <p>60+ Products</p>
-        </div>
-      </div>
-
-      <!-- Category -->
-
-      <div class="col-lg-3 col-md-4 col-sm-6">
-        <div class="category-card">
-          <div class="category-icon">
-            <i class="bi bi-shop"></i>
-          </div>
-
-          <h5>Footwear</h5>
-
-          <p>140+ Products</p>
-        </div>
-      </div>
     </div>
+
   </div>
+
 </section>
 
-
-
- {% endblock %}
+{% endblock %}

@@ -1,12 +1,13 @@
-from multiprocessing import context
 
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse
-from django.db.models import Sum, Q, Count
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse , HttpResponse
+from django.db.models import Sum, Q, Count, F, Avg
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-
+from django.urls import reverse
 from .decorators import role_permission_required, has_role_permission
 from .models import (
     Cart,
@@ -16,24 +17,70 @@ from .models import (
     Category,
     Product,
     ProductImage,
+    ProductReview,
     CartItem,
     Order,
+    OrderItem,
     Wishlist,
     UserAddress,
+    Deal,
+    BlogCategory,
+    BlogPost,
+    ContactMessage,
 )
-from .forms import ProfileForm, UserAddressForm
+
+from .forms import ProfileForm, UserAddressForm, DealForm, BlogCategoryForm, BlogPostForm,ContactMessageForm,ProductReviewForm
 
 #-----------------------------------------
 from openpyxl import load_workbook
 from django.conf import settings
 from django.core.files import File
 from pathlib import Path
-
-
+from reportlab.pdfgen import canvas
+from decimal import Decimal
+from django.utils import timezone
 
 # ==========================================================
 # COMMON ADMIN QUERY HELPERS
 # ==========================================================
+# ==========================================================
+# REUSABLE PRODUCT CARD QUERYSET
+# ==========================================================
+
+def get_product_card_queryset():
+    """
+    Common Product queryset for product cards used on:
+    - Home
+    - Shop
+    - Deals
+    - Related Products
+    - Category results
+
+    Adds dynamic average rating and total review count.
+    """
+
+    return (
+        Product.objects
+        .filter(is_active=True)
+        .select_related("category")
+        .prefetch_related("images")
+        .annotate(
+            average_rating=Avg(
+                "reviews__rating",
+                filter=Q(
+                    reviews__is_approved=True
+                )
+            ),
+
+            review_count=Count(
+                "reviews",
+                filter=Q(
+                    reviews__is_approved=True
+                ),
+                distinct=True
+            ),
+        )
+    )
 
 def get_customers_queryset():
     """
@@ -95,73 +142,920 @@ def get_admin_permissions_context(user):
         "can_manage_customers": has_role_permission(user, "Can Manage Customers"),
         "can_view_reports": has_role_permission(user, "Can View Reports"),
         "can_manage_payments": has_role_permission(user, "Can Manage Payments"),
+        "can_manage_blog": has_role_permission(user,"Can Manage Blog"),
     }
 
+# ==========================================================
+# PRODUCT REVIEW HELPERS
+# ==========================================================
+
+def user_has_purchased_product(
+    user,
+    product
+):
+    """
+    Returns True when the customer has purchased this product.
+
+    Change the allowed order statuses if your project uses
+    different status names.
+    """
+
+    if not user.is_authenticated:
+        return False
+
+    return OrderItem.objects.filter(
+        order__user=user,
+        order__order_status__in=[
+            "Confirmed",
+            "Shipped",
+            "Delivered",
+        ],
+        product=product,
+    ).exists()
+
+
+def get_product_review_summary(product):
+
+    approved_reviews = (
+        ProductReview.objects
+        .filter(
+            product=product,
+            is_approved=True
+        )
+    )
+
+    summary = approved_reviews.aggregate(
+        average_rating=Avg("rating"),
+        total_reviews=Count("id")
+    )
+
+    average_rating = (
+        summary["average_rating"]
+        or 0
+    )
+
+    total_reviews = (
+        summary["total_reviews"]
+        or 0
+    )
+
+    rating_counts = {
+        rating: approved_reviews.filter(
+            rating=rating
+        ).count()
+        for rating in range(1, 6)
+    }
+
+    rating_percentages = {}
+
+    for rating in range(1, 6):
+
+        count = rating_counts[rating]
+
+        rating_percentages[rating] = (
+            round(
+                (
+                    count /
+                    total_reviews
+                ) * 100
+            )
+            if total_reviews
+            else 0
+        )
+
+    return {
+        "average_rating": round(
+            average_rating,
+            1
+        ),
+        "total_reviews": total_reviews,
+        "rating_counts": rating_counts,
+        "rating_percentages": (
+            rating_percentages
+        ),
+    }
+
+
+def product_review_json(review):
+
+    return {
+        "id": str(review.id),
+
+        "rating": review.rating,
+
+        "title": review.title or "",
+
+        "comment": review.comment,
+
+        "username": (
+            review.user.get_full_name()
+            or review.user.username
+        ),
+
+        "user_id": str(
+            review.user.id
+        ),
+
+        "profile_image": (
+            review.user.profile_image.url
+            if getattr(
+                review.user,
+                "profile_image",
+                None
+            )
+            else ""
+        ),
+
+        "is_verified_purchase": (
+            review.is_verified_purchase
+        ),
+
+        "created_at": timezone.localtime(
+            review.created_at
+        ).strftime(
+            "%d %b %Y"
+        ),
+    }
 
 # ==========================================================
 # WEBSITE PAGES
 # ==========================================================
 
 def home(request):
-    categories = Category.objects.filter(is_active=True).annotate(
-        product_count=Count("products")
-    )[:8]
-
-    featured_products = (
-        Product.objects.filter(is_active=True)
-        .prefetch_related("images")
-        .select_related("category")
-        .order_by("-created_at")[:8]
+    categories = (
+        Category.objects
+        .filter(is_active=True)
+        .annotate(
+            product_count=Count(
+                "products",
+                filter=Q(products__is_active=True)
+            )
+        )
+        .order_by("category_name")[:8]
     )
 
-    new_arrivals = (
-        Product.objects.filter(is_active=True)
-        .prefetch_related("images")
+    products = (
+        Product.objects
+        .filter(is_active=True)
         .select_related("category")
-        .order_by("-created_at")[:3]
+        .prefetch_related("images")
     )
+
+    featured_products = products.order_by("-created_at")[:8]
+    new_arrivals = products.order_by("-created_at")[:6]
+
+    wishlist_product_ids = []
+
+    if request.user.is_authenticated:
+        wishlist_product_ids = list(
+            Wishlist.objects
+            .filter(user=request.user)
+            .values_list("product_id", flat=True)
+        )
 
     context = {
         "categories": categories,
         "featured_products": featured_products,
         "new_arrivals": new_arrivals,
+        "wishlist_product_ids": wishlist_product_ids,
     }
+    
 
     return render(request, "home.html", context)
 
+def header_product_search(request):
+    query = request.GET.get("q", "").strip()
+
+    if len(query) < 2:
+        return JsonResponse({
+            "success": True,
+            "products": [],
+            "message": "Enter at least 2 characters."
+        })
+
+    products = (
+        Product.objects
+        .filter(is_active=True)
+        .filter(
+            Q(product_name__icontains=query)
+            | Q(short_description__icontains=query)
+            | Q(long_description__icontains=query)
+            | Q(category__category_name__icontains=query)
+            | Q(sku__icontains=query)
+        )
+        .select_related("category")
+        .prefetch_related("images")
+        .annotate(
+            average_rating=Avg(
+                "reviews__rating",
+                filter=Q(reviews__is_approved=True)
+            ),
+            review_count=Count(
+                "reviews",
+                filter=Q(reviews__is_approved=True),
+                distinct=True
+            )
+        )
+        .distinct()[:8]
+    )
+
+    product_data = []
+
+    for product in products:
+        first_image = product.images.first()
+
+        product_data.append({
+    "id": str(product.id),
+    "name": product.product_name,
+    "category": (
+        product.category.category_name
+        if product.category
+        else "Uncategorized"
+    ),
+    "description": product.short_description or "",
+    "price": float(product.price),
+    "current_price": float(product.current_price),
+    "has_deal": bool(product.has_active_deal),
+    "rating": round(product.average_rating or 0, 1),
+    "review_count": product.review_count or 0,
+    "image": (
+        first_image.image.url
+        if first_image and first_image.image
+        else ""
+    ),
+    "url": reverse(
+        "product_details",
+        kwargs={"product_id": product.id}
+    ),
+})
+
+    return JsonResponse({
+        "success": True,
+        "products": product_data,
+        "count": len(product_data),
+        "query": query,
+    })
 
 def categories(request):
-    return render(request, "categories.html")
+    categories = (
+        Category.objects
+        .filter(is_active=True)
+        .annotate(
+            product_count=Count(
+                "products",
+                filter=Q(products__is_active=True)
+            )
+        )
+        .order_by("category_name")
+    )
 
+    return render(request, "categories.html", {
+        "categories": categories,
+    })
+
+
+# ==========================================================
+# CUSTOMER DEALS PAGE
+# ==========================================================
 
 def deals(request):
-    return render(request, "deals.html")
 
+    now = timezone.now()
+
+    active_deals = (
+        Deal.objects
+        .filter(
+            is_active=True,
+            start_date__lte=now,
+            end_date__gt=now
+        )
+        .prefetch_related(
+            "products",
+            "categories"
+        )
+        .order_by(
+            "-priority",
+            "-created_at"
+        )
+    )
+
+    featured_deal = active_deals.first()
+
+    deal_products = (
+        get_product_card_queryset()
+        .filter(
+            Q(deals__in=active_deals)
+            | Q(category__deals__in=active_deals)
+        )
+        .distinct()
+        .order_by("-created_at")
+    )
+
+    deal_categories = (
+        Category.objects
+        .filter(
+            products__in=deal_products
+        )
+        .distinct()
+        .order_by("category_name")
+    )
+
+    wishlist_product_ids = []
+
+    if request.user.is_authenticated:
+
+        wishlist_product_ids = list(
+            Wishlist.objects
+            .filter(user=request.user)
+            .values_list(
+                "product_id",
+                flat=True
+            )
+        )
+
+    context = {
+        "active_deals": active_deals,
+        "featured_deal": featured_deal,
+        "deal_products": deal_products,
+        "deal_categories": deal_categories,
+        "wishlist_product_ids": wishlist_product_ids,
+    }
+
+    return render(
+        request,
+        "deals.html",
+        context
+    )
+
+
+# ==========================================================
+# CUSTOMER BLOG PAGE
+# ==========================================================
 
 def blog(request):
-    return render(request, "blog.html")
 
+    posts = get_published_blog_posts()
+
+    featured_post = (
+        posts
+        .filter(is_featured=True)
+        .first()
+    )
+
+    if featured_post is None:
+        featured_post = posts.first()
+
+    categories = (
+        BlogCategory.objects
+        .filter(is_active=True)
+        .annotate(
+            total_posts=Count(
+                "posts",
+                filter=Q(
+                    posts__is_published=True,
+                    posts__published_at__lte=timezone.now()
+                )
+            )
+        )
+        .order_by("category_name")
+    )
+
+    popular_posts = (
+        get_published_blog_posts()
+        .order_by(
+            "-views_count",
+            "-published_at"
+        )[:5]
+    )
+
+    context = {
+        "posts": posts,
+        "featured_post": featured_post,
+        "categories": categories,
+        "popular_posts": popular_posts,
+    }
+
+    return render(
+        request,
+        "blog.html",
+        context
+    )
+
+
+
+# ==========================================================
+# PUBLIC BLOG POPUP DETAILS
+# ==========================================================
+
+def public_blog_popup_details(request, slug):
+
+    post = get_object_or_404(
+        BlogPost.objects.select_related(
+            "category",
+            "author",
+        ),
+        slug=slug,
+        is_published=True,
+        published_at__lte=timezone.now(),
+    )
+
+    # Increase views safely
+    BlogPost.objects.filter(
+        id=post.id
+    ).update(
+        views_count=F("views_count") + 1
+    )
+
+    post.refresh_from_db(
+        fields=["views_count"]
+    )
+
+    related_posts = (
+        BlogPost.objects
+        .filter(
+            is_published=True,
+            published_at__lte=timezone.now(),
+            category=post.category,
+        )
+        .exclude(id=post.id)
+        .select_related(
+            "category",
+            "author",
+        )
+        .order_by(
+            "-is_featured",
+            "-published_at",
+        )[:3]
+    )
+
+    author_name = "Velora Team"
+    author_image = ""
+
+    if post.author:
+        author_name = (
+            post.author.get_full_name()
+            or post.author.username
+        )
+
+        if getattr(
+            post.author,
+            "profile_image",
+            None
+        ):
+            author_image = (
+                post.author.profile_image.url
+            )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+
+        "post": {
+            "id": str(post.id),
+
+            "title": post.title,
+
+            "slug": post.slug,
+
+            "short_description": (
+                post.short_description or ""
+            ),
+
+            "content": (
+                post.content or ""
+            ),
+
+            "category_name": (
+                post.category.category_name
+                if post.category
+                else "Uncategorized"
+            ),
+
+            "author_name": author_name,
+
+            "author_image": author_image,
+
+            "image": (
+                post.image.url
+                if post.image
+                else ""
+            ),
+
+            "is_featured": (
+                post.is_featured
+            ),
+
+            "published_display": (
+                timezone.localtime(
+                    post.published_at
+                ).strftime(
+                    "%d %b %Y, %I:%M %p"
+                )
+                if post.published_at
+                else "Not published"
+            ),
+
+            "views_count": (
+                post.views_count
+            ),
+
+            "public_url": reverse(
+                "blog_details",
+                kwargs={
+                    "slug": post.slug,
+                },
+            ),
+        },
+
+        "related_posts": [
+            {
+                "title": related.title,
+
+                "category_name": (
+                    related.category.category_name
+                    if related.category
+                    else "Uncategorized"
+                ),
+
+                "image": (
+                    related.image.url
+                    if related.image
+                    else ""
+                ),
+
+                "details_url": reverse(
+                    "public_blog_popup_details",
+                    kwargs={
+                        "slug": related.slug,
+                    },
+                ),
+            }
+            for related in related_posts
+        ],
+    })
+
+# ==========================================================
+# CUSTOMER CONTACT PAGE
+# ==========================================================
 
 def contact(request):
-    return render(request, "contact.html")
+
+    form = ContactMessageForm()
+
+    if request.method == "POST":
+
+        form = ContactMessageForm(
+            request.POST
+        )
+
+        if not form.is_valid():
+
+            errors = {
+                field: [
+                    str(error)
+                    for error in field_errors
+                ]
+                for field, field_errors
+                in form.errors.items()
+            }
+
+            if request.headers.get(
+                "X-Requested-With"
+            ) == "XMLHttpRequest":
+
+                return JsonResponse({
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        "Please correct the form errors."
+                    ),
+                    "errors": errors,
+                }, status=400)
+
+            messages.error(
+                request,
+                "Please fill all required fields correctly."
+            )
+
+            return render(
+                request,
+                "contact.html",
+                {
+                    "contact_form": form,
+                }
+            )
+
+        contact_message = form.save()
+
+        if request.headers.get(
+            "X-Requested-With"
+        ) == "XMLHttpRequest":
+
+            return JsonResponse({
+                "success": True,
+                "status": "success",
+                "message": (
+                    "Your message has been sent successfully."
+                ),
+                "contact_id": str(
+                    contact_message.id
+                ),
+            })
+
+        messages.success(
+            request,
+            "Your message has been sent successfully."
+        )
+
+        return redirect(
+            "contact_page"
+        )
+
+    return render(
+        request,
+        "contact.html",
+        {
+            "contact_form": form,
+        }
+    )
 
 
 def shop(request):
-    products = Product.objects.filter(is_active=True).prefetch_related("images")
-    return render(request, "shop.html", {"products": products})
+    products = (
+        Product.objects
+        .filter(is_active=True)
+        .select_related("category")
+        .prefetch_related("images")
+    )
+
+    categories = Category.objects.filter(is_active=True)
+
+    category_id = request.GET.get("category")
+    search_query = request.GET.get("q", "").strip()
+
+    selected_category = None
+
+    if category_id:
+        selected_category = Category.objects.filter(
+            id=category_id,
+            is_active=True
+        ).first()
+
+        if selected_category:
+            products = products.filter(category=selected_category)
+
+    if search_query:
+        products = products.filter(
+            Q(product_name__icontains=search_query) |
+            Q(short_description__icontains=search_query) |
+            Q(category__category_name__icontains=search_query)
+        )
+
+    products = products.order_by("-created_at")
+
+    return render(request, "shop.html", {
+        "products": products,
+        "categories": categories,
+        "selected_category": selected_category,
+        "search_query": search_query,
+    })
 
 
 def product_details(request, product_id):
+
     product = get_object_or_404(
-        Product.objects.prefetch_related("images"),
-        id=product_id
+        Product.objects
+        .select_related("category")
+        .prefetch_related(
+            "images",
+            "reviews__user",
+        ),
+        id=product_id,
+        is_active=True
     )
-    return render(request, "productDetails.html", {"product": product})
+
+    # ==========================================
+    # Active Deal
+    # ==========================================
+
+    active_deal = (
+        Deal.objects.filter(
+            is_active=True,
+            start_date__lte=timezone.now(),
+            end_date__gte=timezone.now()
+        )
+        .filter(products=product)
+        .first()
+    )
+
+    # ==========================================
+    # Wishlist
+    # ==========================================
+
+    is_wishlist = False
+
+    if request.user.is_authenticated:
+        is_wishlist = Wishlist.objects.filter(
+            user=request.user,
+            product=product
+        ).exists()
+
+    # ==========================================
+    # Reviews
+    # ==========================================
+
+    product_reviews = (
+        ProductReview.objects
+        .filter(
+            product=product,
+            is_approved=True
+        )
+        .select_related("user")
+        .order_by("-created_at")
+    )
+
+    review_summary = product_reviews.aggregate(
+        average_rating=Avg("rating"),
+        total_reviews=Count("id")
+    )
+
+    average_rating = review_summary["average_rating"] or 0
+    total_reviews = review_summary["total_reviews"] or 0
+
+    rating_counts = {}
+
+    rating_percentages = {}
+
+    for star in range(1, 6):
+
+        count = product_reviews.filter(
+            rating=star
+        ).count()
+
+        rating_counts[star] = count
+
+        rating_percentages[star] = (
+            round((count / total_reviews) * 100)
+            if total_reviews
+            else 0
+        )
+
+    # ==========================================
+    # User Review
+    # ==========================================
+
+    user_review = None
+
+    if request.user.is_authenticated:
+
+        user_review = ProductReview.objects.filter(
+            product=product,
+            user=request.user
+        ).first()
+
+    # ==========================================
+    # Related Products
+    # ==========================================
+
+    related_products = (
+        Product.objects.filter(
+            category=product.category,
+            is_active=True
+        )
+        .exclude(id=product.id)
+        .prefetch_related("images")
+        [:8]
+    )
+
+    verified_purchase = False
+    can_review = False
+    
+    if request.user.is_authenticated:
+    
+        verified_purchase = user_has_purchased_product(
+            request.user,
+            product
+        )
+    
+        can_review = (
+            verified_purchase
+            or user_review is not None
+        )
+    
+    review_form = ProductReviewForm(
+        instance=user_review
+    )
 
 
-def product_list(request):
-    products = Product.objects.filter(is_active=True)
-    return render(request, "productList.html", {"products": products})
+    context = {
+
+    "product": product,
+    "active_deal": active_deal,
+    "is_wishlist": is_wishlist,
+    "product_reviews": product_reviews,
+    "average_rating": round(average_rating, 1),
+    "total_reviews": total_reviews,
+    "rating_counts": rating_counts,
+    "rating_percentages": rating_percentages,
+    "user_review": user_review,
+    "review_form": review_form,
+    "verified_purchase": verified_purchase,
+    "can_review": can_review,
+    "related_products": related_products,
+    }
+
+    return render(
+        request,
+        "productDetails.html",
+        context
+    )
+    
+@login_required
+@require_POST
+def save_product_review(request, product_id):
+
+    product = get_object_or_404(
+        Product,
+        id=product_id,
+        is_active=True
+    )
+
+    existing_review = ProductReview.objects.filter(
+        product=product,
+        user=request.user
+    ).first()
+
+    verified_purchase = user_has_purchased_product(
+        request.user,
+        product
+    )
+
+    if not verified_purchase and existing_review is None:
+
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": "You can review this product after purchasing it."
+        }, status=403)
+
+    form = ProductReviewForm(
+        request.POST,
+        instance=existing_review
+    )
+
+    if not form.is_valid():
+
+        errors = {
+            field: [
+                str(error)
+                for error in field_errors
+            ]
+            for field, field_errors in form.errors.items()
+        }
+
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": "Please correct the review form.",
+            "errors": errors,
+        }, status=400)
+
+    review = form.save(commit=False)
+
+    review.product = product
+    review.user = request.user
+    review.is_verified_purchase = verified_purchase
+
+    review.save()
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": (
+            "Your review was updated successfully."
+            if existing_review
+            else "Your review was added successfully."
+        )
+    })
+
+
+@login_required
+@require_POST
+def delete_product_review(request, review_id):
+
+    review = get_object_or_404(
+        ProductReview,
+        id=review_id,
+        user=request.user
+    )
+
+    review.delete()
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": "Your review was deleted successfully."
+    })
 
 
 # ==========================================================
@@ -345,7 +1239,7 @@ def move_to_cart(request, item_id):
         product=wishlist.product,
         defaults={
             "quantity": 1,
-            "price": wishlist.product.price,
+            "price": wishlist.product.get_final_price(),
         }
     )
 
@@ -540,6 +1434,28 @@ def delete_address_ajax(request, address_id):
 
     
 # ==========================================================
+# CART PRICE HELPERS
+# ==========================================================
+
+def refresh_cart_prices(cart):
+    """Refresh cart prices using the latest active deals."""
+    updated_items = []
+
+    if not cart:
+        return updated_items
+
+    for item in cart.items.select_related("product"):
+        latest_price = item.product.get_final_price()
+
+        if item.price != latest_price:
+            item.price = latest_price
+            item.save(update_fields=["price"])
+            updated_items.append(item)
+
+    return updated_items
+
+
+# ==========================================================
 # CART
 # ==========================================================
 
@@ -547,19 +1463,37 @@ def delete_address_ajax(request, address_id):
 def cart_page(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
 
-    cart_items = CartItem.objects.filter(cart=cart).select_related(
-        "product", "product__category"
-    ).prefetch_related("product__images")
+    price_updated_items = refresh_cart_prices(cart)
 
-    subtotal = 0
+    cart_items = (
+        CartItem.objects
+        .filter(cart=cart)
+        .select_related("product", "product__category")
+        .prefetch_related("product__images")
+    )
+
+    subtotal = Decimal("0.00")
+    discount = Decimal("0.00")
 
     for item in cart_items:
-     item.subtotal = item.price * item.quantity
-     subtotal += item.subtotal
+        item.subtotal = item.price * item.quantity
+        item.original_subtotal = item.product.price * item.quantity
+        item.discount_amount = max(
+            item.original_subtotal - item.subtotal,
+            Decimal("0.00")
+        )
 
-    shipping = 0
-    discount = 0
-    total = subtotal + shipping - discount
+        subtotal += item.subtotal
+        discount += item.discount_amount
+
+    shipping = Decimal("0.00")
+    total = subtotal + shipping
+
+    if price_updated_items:
+        messages.info(
+            request,
+            "Some cart prices were updated because a deal started or expired."
+        )
 
     context = {
         "cart": cart,
@@ -577,24 +1511,41 @@ def cart_page(request):
 def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id, is_active=True)
 
+    if product.stock_quantity <= 0:
+        return JsonResponse({
+            "status": "error",
+            "message": "This product is out of stock."
+        }, status=400)
+
     cart, created = Cart.objects.get_or_create(user=request.user)
+    final_price = product.get_final_price()
 
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product,
         defaults={
             "quantity": 1,
-            "price": product.price,
+            "price": final_price,
         }
     )
 
     if not created:
+        if cart_item.quantity >= product.stock_quantity:
+            return JsonResponse({
+                "status": "error",
+                "message": "You cannot add more than the available stock."
+            }, status=400)
+
         cart_item.quantity += 1
-        cart_item.save()
+        cart_item.price = final_price
+        cart_item.save(update_fields=["quantity", "price"])
 
     return JsonResponse({
         "status": "success",
-        "message": "Product added to cart."
+        "message": "Product added to cart.",
+        "price": str(final_price),
+        "quantity": cart_item.quantity,
+        "cart_count": cart.items.count(),
     })
 
 
@@ -620,18 +1571,51 @@ def remove_cart(request, product_id):
 @login_required
 def checkout(request):
     cart = Cart.objects.filter(user=request.user).first()
-    cart_items = CartItem.objects.filter(cart=cart).select_related("product") if cart else []
 
-    subtotal = sum(item.price * item.quantity for item in cart_items)
-    shipping = 0 if subtotal >= 999 and subtotal > 0 else 99
-    total = subtotal + shipping if subtotal > 0 else 0
+    price_updated_items = refresh_cart_prices(cart)
+
+    cart_items = (
+        CartItem.objects
+        .filter(cart=cart)
+        .select_related("product")
+        if cart else []
+    )
+
+    subtotal = sum(
+        (item.price * item.quantity for item in cart_items),
+        Decimal("0.00")
+    )
+
+    deal_savings = sum(
+        (
+            max(item.product.price - item.price, Decimal("0.00"))
+            * item.quantity
+            for item in cart_items
+        ),
+        Decimal("0.00")
+    )
+
+    shipping = (
+        Decimal("0.00")
+        if subtotal >= Decimal("999.00") and subtotal > 0
+        else Decimal("99.00")
+    )
+
+    total = subtotal + shipping if subtotal > 0 else Decimal("0.00")
 
     addresses = UserAddress.objects.filter(user=request.user)
     selected_address = addresses.filter(is_default=True).first()
 
+    if price_updated_items:
+        messages.info(
+            request,
+            "Some prices were updated because a deal started or expired."
+        )
+
     return render(request, "checkout.html", {
         "cart_items": cart_items,
         "subtotal": subtotal,
+        "deal_savings": deal_savings,
         "shipping": shipping,
         "total": total,
         "addresses": addresses,
@@ -662,7 +1646,1067 @@ def checkout_set_address(request, address_id):
             "pincode": address.pincode,
         }
     })
+    
+# ==========================================================
+# ADMIN CONTACT MESSAGES
+# ==========================================================
 
+@role_permission_required("Can Manage Customers")
+@login_required
+def admin_contact_messages(request):
+
+    query = request.GET.get(
+        "q",
+        ""
+    ).strip()
+
+    contact_messages = (
+        ContactMessage.objects
+        .all()
+        .order_by("-created_at")
+    )
+
+    if query:
+        contact_messages = (
+            contact_messages.filter(
+                Q(name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(phone__icontains=query)
+                | Q(subject__icontains=query)
+                | Q(message__icontains=query)
+            )
+        )
+
+    context = {
+        "contact_messages": contact_messages,
+
+        "total_messages": (
+            ContactMessage.objects.count()
+        ),
+
+        "new_messages": (
+            ContactMessage.objects.filter(
+                status="New"
+            ).count()
+        ),
+
+        "in_progress_messages": (
+            ContactMessage.objects.filter(
+                status="In Progress"
+            ).count()
+        ),
+
+        "resolved_messages": (
+            ContactMessage.objects.filter(
+                status="Resolved"
+            ).count()
+        ),
+
+        "unread_messages": (
+            ContactMessage.objects.filter(
+                is_read=False
+            ).count()
+        ),
+
+        "search_query": query,
+    }
+
+    context.update(
+        get_admin_permissions_context(
+            request.user
+        )
+    )
+
+    return render(
+        request,
+        "adminContactMessages.html",
+        context
+    )
+
+
+# ==========================================================
+# CONTACT MESSAGE DETAILS
+# ==========================================================
+
+@role_permission_required("Can Manage Customers")
+@login_required
+def admin_contact_message_details(
+    request,
+    message_id
+):
+
+    contact_message = get_object_or_404(
+        ContactMessage,
+        id=message_id
+    )
+
+    if not contact_message.is_read:
+
+        contact_message.is_read = True
+
+        contact_message.save(
+            update_fields=[
+                "is_read",
+                "updated_at",
+            ]
+        )
+
+    return JsonResponse({
+        "success": True,
+
+        "contact": {
+            "id": str(contact_message.id),
+            "name": contact_message.name,
+            "email": contact_message.email,
+            "phone": contact_message.phone or "",
+            "subject": contact_message.subject,
+            "message": contact_message.message,
+            "status": contact_message.status,
+            "is_read": contact_message.is_read,
+
+            "created_at": timezone.localtime(
+                contact_message.created_at
+            ).strftime(
+                "%d %b %Y, %I:%M %p"
+            ),
+        },
+    })
+
+
+# ==========================================================
+# UPDATE CONTACT STATUS
+# ==========================================================
+
+@role_permission_required("Can Manage Customers")
+@login_required
+@require_POST
+def admin_update_contact_status(
+    request,
+    message_id
+):
+
+    contact_message = get_object_or_404(
+        ContactMessage,
+        id=message_id
+    )
+
+    new_status = request.POST.get(
+        "status",
+        ""
+    ).strip()
+
+    valid_statuses = {
+        choice[0]
+        for choice
+        in ContactMessage.STATUS_CHOICES
+    }
+
+    if new_status not in valid_statuses:
+
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": "Invalid message status.",
+        }, status=400)
+
+    contact_message.status = new_status
+    contact_message.is_read = True
+
+    contact_message.save(
+        update_fields=[
+            "status",
+            "is_read",
+            "updated_at",
+        ]
+    )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": (
+            "Contact message status updated."
+        ),
+        "contact_status": new_status,
+        "message_id": str(contact_message.id),
+    })
+
+
+# ==========================================================
+# DELETE CONTACT MESSAGE
+# ==========================================================
+
+@role_permission_required("Can Manage Customers")
+@login_required
+@require_POST
+def admin_delete_contact_message(
+    request,
+    message_id
+):
+
+    contact_message = get_object_or_404(
+        ContactMessage,
+        id=message_id
+    )
+
+    deleted_id = str(
+        contact_message.id
+    )
+
+    contact_message.delete()
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": (
+            "Contact message deleted successfully."
+        ),
+        "deleted_id": deleted_id,
+    })
+
+# ==========================================================
+# BLOG REUSABLE HELPERS
+# ==========================================================
+
+def is_ajax_request(request):
+    return (
+        request.headers.get("X-Requested-With")
+        == "XMLHttpRequest"
+    )
+
+
+def form_errors_json(form):
+    return {
+        field: [
+            str(error)
+            for error in field_errors
+        ]
+        for field, field_errors in form.errors.items()
+    }
+
+
+def get_blog_posts_queryset():
+    return (
+        BlogPost.objects
+        .select_related(
+            "category",
+            "author",
+        )
+        .order_by(
+            "-is_featured",
+            "-published_at",
+            "-created_at",
+        )
+    )
+
+
+def blog_category_json(category):
+    return {
+        "id": str(category.id),
+        "category_name": category.category_name,
+        "description": category.description or "",
+        "is_active": category.is_active,
+        "posts_count": category.posts.count(),
+    }
+
+
+def blog_post_json(post):
+    return {
+        "id": str(post.id),
+        "title": post.title,
+        "slug": post.slug,
+
+        "short_description": (
+            post.short_description or ""
+        ),
+
+        "content": (
+            post.content or ""
+        ),
+
+        "category_id": (
+            str(post.category_id)
+            if post.category_id
+            else ""
+        ),
+
+        "category_name": (
+            post.category.category_name
+            if post.category
+            else "Uncategorized"
+        ),
+
+        "author_name": (
+            post.author.username
+            if post.author
+            else "Velora Team"
+        ),
+
+        "is_published": (
+            post.is_published
+        ),
+
+        "is_featured": (
+            post.is_featured
+        ),
+
+        "status_text": (
+            post.status_text
+        ),
+
+        "views_count": (
+            post.views_count
+        ),
+
+        "published_at": (
+            timezone.localtime(
+                post.published_at
+            ).strftime(
+                "%Y-%m-%dT%H:%M"
+            )
+            if post.published_at
+            else ""
+        ),
+
+        "published_display": (
+            timezone.localtime(
+                post.published_at
+            ).strftime(
+                "%d %b %Y, %I:%M %p"
+            )
+            if post.published_at
+            else "Not published"
+        ),
+
+        "image": (
+            post.image.url
+            if post.image
+            else ""
+        ),
+
+        "public_url": (
+            reverse(
+                "blog_details",
+                kwargs={
+                    "slug": post.slug
+                },
+            )
+            if (
+                post.slug
+                and post.is_published
+            )
+            else ""
+        ),
+    }
+
+def blog_success_response(
+    request,
+    *,
+    message,
+    redirect_name="admin_blog_posts",
+    payload=None,
+    reload_required=True,
+):
+    payload = payload or {}
+
+    if is_ajax_request(request):
+        return JsonResponse({
+            "success": True,
+            "status": "success",
+            "message": message,
+            "reload_required": reload_required,
+            **payload,
+        })
+
+    messages.success(
+        request,
+        message,
+    )
+
+    return redirect(
+        redirect_name
+    )
+
+
+def blog_error_response(
+    request,
+    *,
+    message,
+    errors=None,
+    status=400,
+    redirect_name="admin_blog_posts",
+):
+    if is_ajax_request(request):
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": message,
+            "errors": errors or {},
+        }, status=status)
+
+    messages.error(
+        request,
+        message,
+    )
+
+    return redirect(
+        redirect_name
+    )
+
+
+# ==========================================================
+# PUBLIC BLOG PAGE
+# ==========================================================
+
+def blog_page(request):
+    query = request.GET.get(
+        "q",
+        ""
+    ).strip()
+
+    category_id = request.GET.get(
+        "category",
+        ""
+    ).strip()
+
+    now = timezone.now()
+
+    posts = (
+        get_blog_posts_queryset()
+        .filter(
+            is_published=True,
+            published_at__lte=now,
+        )
+    )
+
+    if query:
+        posts = posts.filter(
+            Q(title__icontains=query)
+            | Q(short_description__icontains=query)
+            | Q(content__icontains=query)
+            | Q(
+                category__category_name__icontains=query
+            )
+            | Q(author__username__icontains=query)
+        )
+
+    if category_id:
+        posts = posts.filter(
+            category_id=category_id
+        )
+
+    categories = (
+        BlogCategory.objects
+        .filter(is_active=True)
+        .annotate(
+            published_posts_count=Count(
+                "posts",
+                filter=Q(
+                    posts__is_published=True,
+                    posts__published_at__lte=now,
+                ),
+            )
+        )
+        .order_by("category_name")
+    )
+
+    featured_posts = (
+        posts
+        .filter(is_featured=True)[:3]
+    )
+
+    popular_posts = (
+        posts
+        .order_by(
+            "-views",
+            "-published_at",
+        )[:5]
+    )
+
+    context = {
+        "posts": posts,
+        "categories": categories,
+        "featured_posts": featured_posts,
+        "popular_posts": popular_posts,
+        "search_query": query,
+        "selected_category": category_id,
+        "total_posts": posts.count(),
+    }
+
+    return render(
+        request,
+        "blog.html",
+        context,
+    )
+
+
+# ==========================================================
+# NORMAL FULL BLOG DETAILS PAGE
+# ==========================================================
+
+def blog_details(request, slug):
+
+    post = get_object_or_404(
+        BlogPost.objects.select_related(
+            "category",
+            "author",
+        ),
+        slug=slug,
+        is_published=True,
+        published_at__lte=timezone.now(),
+    )
+
+    BlogPost.objects.filter(
+        id=post.id
+    ).update(
+        views_count=F("views_count") + 1
+    )
+
+    post.refresh_from_db(
+        fields=["views_count"]
+    )
+
+    related_posts = (
+        BlogPost.objects
+        .filter(
+            category=post.category,
+            is_published=True,
+            published_at__lte=timezone.now(),
+        )
+        .exclude(id=post.id)
+        .select_related(
+            "category",
+            "author",
+        )
+        .order_by(
+            "-is_featured",
+            "-published_at",
+        )[:4]
+    )
+
+    return render(
+        request,
+        "blogDetails.html",
+        {
+            "post": post,
+            "related_posts": related_posts,
+        },
+    )
+
+# ==========================================================
+# ADMIN BLOG MANAGEMENT
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+def admin_blog_posts(request):
+    query = request.GET.get(
+        "q",
+        ""
+    ).strip()
+
+    posts = get_blog_posts_queryset()
+
+    if query:
+        posts = posts.filter(
+            Q(title__icontains=query)
+            | Q(
+                short_description__icontains=query
+            )
+            | Q(
+                category__category_name__icontains=query
+            )
+            | Q(
+                author__username__icontains=query
+            )
+        )
+
+    categories = (
+        BlogCategory.objects
+        .annotate(
+            total_posts=Count(
+                "posts"
+            )
+        )
+        .order_by(
+            "category_name"
+        )
+    )
+
+    now = timezone.now()
+
+    context = {
+        "posts": posts,
+        "categories": categories,
+        "blog_form": BlogPostForm(),
+        "category_form": BlogCategoryForm(),
+        "total_posts": BlogPost.objects.count(),
+        "published_posts": (
+            BlogPost.objects
+            .filter(
+                is_published=True,
+                published_at__lte=now,
+            )
+            .count()
+        ),
+        "draft_posts": (
+            BlogPost.objects
+            .filter(
+                is_published=False
+            )
+            .count()
+        ),
+        "featured_posts": (
+            BlogPost.objects
+            .filter(
+                is_featured=True
+            )
+            .count()
+        ),
+        "total_blog_categories": (
+            BlogCategory.objects.count()
+        ),
+        "search_query": query,
+    }
+
+    context.update(
+        get_admin_permissions_context(
+            request.user
+        )
+    )
+
+    return render(
+        request,
+        "adminBlogPosts.html",
+        context,
+    )
+
+
+# ==========================================================
+# SAVE BLOG POST - ADD AND EDIT
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_save_blog_post(request):
+    post_id = request.POST.get(
+        "post_id",
+        ""
+    ).strip()
+
+    post = None
+
+    if post_id:
+        post = get_object_or_404(
+            BlogPost,
+            id=post_id,
+        )
+
+    form = BlogPostForm(
+        request.POST,
+        request.FILES,
+        instance=post,
+    )
+
+    if not form.is_valid():
+        return blog_error_response(
+            request,
+            message=(
+                "Please correct the blog form errors."
+            ),
+            errors=form_errors_json(
+                form
+            ),
+        )
+
+    saved_post = form.save(
+        commit=False
+    )
+
+    if saved_post.author_id is None:
+        saved_post.author = (
+            request.user
+        )
+
+    if (
+        saved_post.is_published
+        and not saved_post.published_at
+    ):
+        saved_post.published_at = (
+            timezone.now()
+        )
+
+    if not saved_post.is_published:
+        saved_post.published_at = None
+
+    saved_post.save()
+
+    message = (
+        "Blog post updated successfully."
+        if post
+        else "Blog post created successfully."
+    )
+
+    return blog_success_response(
+        request,
+        message=message,
+        payload={
+            "post": blog_post_json(
+                saved_post
+            ),
+        },
+    )
+
+
+# ==========================================================
+# BLOG POST DETAILS FOR EDIT MODAL
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+def admin_blog_post_details(
+    request,
+    post_id,
+):
+    post = get_object_or_404(
+        BlogPost.objects.select_related(
+            "category",
+            "author",
+        ),
+        id=post_id,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "post": blog_post_json(
+            post
+        ),
+    })
+
+
+# ==========================================================
+# TOGGLE BLOG PUBLISH STATUS
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_toggle_blog_status(
+    request,
+    post_id,
+):
+    post = get_object_or_404(
+        BlogPost,
+        id=post_id,
+    )
+
+    post.is_published = (
+        not post.is_published
+    )
+
+    if post.is_published:
+        if not post.published_at:
+            post.published_at = (
+                timezone.now()
+            )
+    else:
+        post.published_at = None
+
+    post.save(
+        update_fields=[
+            "is_published",
+            "published_at",
+            "updated_at",
+        ]
+    )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+
+        "message": (
+            "Blog post published successfully."
+            if post.is_published
+            else "Blog post moved to draft successfully."
+        ),
+
+        "post": blog_post_json(
+            post
+        ),
+    })
+
+
+# ==========================================================
+# TOGGLE FEATURED BLOG
+# ==========================================================
+
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_toggle_blog_feature(
+    request,
+    post_id,
+):
+    post = get_object_or_404(
+        BlogPost,
+        id=post_id,
+    )
+
+    post.is_featured = (
+        not post.is_featured
+    )
+
+    post.save(
+        update_fields=[
+            "is_featured",
+            "updated_at",
+        ]
+    )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+
+        "message": (
+            "Blog post marked as featured."
+            if post.is_featured
+            else "Blog post removed from featured."
+        ),
+
+        "post": blog_post_json(
+            post
+        ),
+    })
+
+
+# ==========================================================
+# DELETE BLOG POST
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_delete_blog_post(
+    request,
+    post_id,
+):
+    post = get_object_or_404(
+        BlogPost,
+        id=post_id,
+    )
+
+    deleted_id = str(
+        post.id
+    )
+
+    post.delete()
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": (
+            "Blog post deleted successfully."
+        ),
+        "deleted_id": deleted_id,
+    })
+
+
+# ==========================================================
+# SAVE BLOG CATEGORY - ADD AND EDIT
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_save_blog_category(
+    request,
+):
+    category_id = request.POST.get(
+        "category_id",
+        ""
+    ).strip()
+
+    category = None
+
+    if category_id:
+        category = get_object_or_404(
+            BlogCategory,
+            id=category_id,
+        )
+
+    form = BlogCategoryForm(
+        request.POST,
+        instance=category,
+    )
+
+    if not form.is_valid():
+        return blog_error_response(
+            request,
+            message=(
+                "Please correct the category form errors."
+            ),
+            errors=form_errors_json(
+                form
+            ),
+        )
+
+    saved_category = (
+        form.save()
+    )
+
+    message = (
+        "Blog category updated successfully."
+        if category
+        else "Blog category created successfully."
+    )
+
+    return blog_success_response(
+        request,
+        message=message,
+        payload={
+            "category": (
+                blog_category_json(
+                    saved_category
+                )
+            ),
+        },
+    )
+
+
+# ==========================================================
+# BLOG CATEGORY DETAILS FOR EDIT MODAL
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+def admin_blog_category_details(
+    request,
+    category_id,
+):
+    category = get_object_or_404(
+        BlogCategory,
+        id=category_id,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "category": (
+            blog_category_json(
+                category
+            )
+        ),
+    })
+
+
+# ==========================================================
+# TOGGLE BLOG CATEGORY STATUS
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_toggle_blog_category_status(
+    request,
+    category_id,
+):
+    category = get_object_or_404(
+        BlogCategory,
+        id=category_id,
+    )
+
+    category.is_active = (
+        not category.is_active
+    )
+
+    category.save(
+        update_fields=[
+            "is_active",
+        ]
+    )
+
+    message = (
+        "Blog category activated successfully."
+        if category.is_active
+        else "Blog category deactivated successfully."
+    )
+
+    return blog_success_response(
+        request,
+        message=message,
+        payload={
+            "category": (
+                blog_category_json(
+                    category
+                )
+            ),
+        },
+        reload_required=False,
+    )
+
+
+# ==========================================================
+# DELETE BLOG CATEGORY
+# ==========================================================
+
+@login_required
+@role_permission_required(
+    "Can Manage Blog"
+)
+@require_POST
+def admin_delete_blog_category(
+    request,
+    category_id,
+):
+    category = get_object_or_404(
+        BlogCategory,
+        id=category_id,
+    )
+
+    if category.posts.exists():
+        return blog_error_response(
+            request,
+            message=(
+                "Move or delete this category's posts first."
+            ),
+        )
+
+    deleted_id = str(
+        category.id
+    )
+
+    category.delete()
+
+    return blog_success_response(
+        request,
+        message=(
+            "Blog category deleted successfully."
+        ),
+        payload={
+            "deleted_id": deleted_id,
+        },
+        reload_required=False,
+    )
 # ==========================================================
 # ADMIN DASHBOARD
 # ==========================================================
@@ -701,6 +2745,7 @@ def admin_dashboard(request):
 # ==========================================================
 
 def create_default_permissions_roles():
+
     permission_names = [
         "Can View Dashboard",
 
@@ -720,48 +2765,98 @@ def create_default_permissions_roles():
 
         "Can Buy Products",
         "Can Manage Wishlist",
+        "Can Manage Deals",
+        "Can Manage Blog",
     ]
 
     permissions = {}
 
+    # Create missing permissions
     for name in permission_names:
+
         permission, created = Permission.objects.get_or_create(
             permission_name=name
         )
+
         permissions[name] = permission
+
+
+    # ======================================================
+    # SUPER ADMIN
+    # ======================================================
 
     super_admin, created = Role.objects.get_or_create(
         role_name="Super Admin",
-        defaults={"is_default": True}
+        defaults={
+            "is_default": True
+        }
     )
+
     super_admin.is_default = True
-    super_admin.save()
-    super_admin.permissions.set(Permission.objects.all())
+
+    super_admin.save(
+        update_fields=["is_default"]
+    )
+
+    super_admin.permissions.set(
+        Permission.objects.all()
+    )
+
+
+    # ======================================================
+    # ADMIN
+    # ======================================================
 
     admin, created = Role.objects.get_or_create(
         role_name="Admin",
-        defaults={"is_default": True}
+        defaults={
+            "is_default": True
+        }
     )
+
     admin.is_default = True
-    admin.save()
+
+    admin.save(
+        update_fields=["is_default"]
+    )
+
     admin.permissions.set([
         permissions["Can View Dashboard"],
+
+        permissions["Can Manage Customers"],
+
         permissions["Can Manage Products"],
         permissions["Can Delete Products"],
         permissions["Can Manage Categories"],
+
         permissions["Can Manage Orders"],
         permissions["Can View Orders"],
-        permissions["Can ManageCustomers"] if "Can ManageCustomers" in permissions else permissions["Can Manage Customers"],
         permissions["Can Manage Payments"],
+
         permissions["Can View Reports"],
+
+        permissions["Can Manage Deals"],
+        permissions["Can Manage Blog"],
     ])
+
+
+    # ======================================================
+    # USER
+    # ======================================================
 
     user, created = Role.objects.get_or_create(
         role_name="User",
-        defaults={"is_default": True}
+        defaults={
+            "is_default": True
+        }
     )
+
     user.is_default = True
-    user.save()
+
+    user.save(
+        update_fields=["is_default"]
+    )
+
     user.permissions.set([
         permissions["Can Buy Products"],
         permissions["Can Manage Wishlist"],
@@ -775,22 +2870,48 @@ def create_default_permissions_roles():
 @role_permission_required("Can Manage Roles")
 @login_required
 def admin_role_list(request):
-    query = request.GET.get("q", "")
 
-    roles = Role.objects.all().order_by("-created_at")
+    create_default_permissions_roles()
 
-    if query:
-        roles = roles.filter(role_name__icontains=query)
+    search_query = request.GET.get(
+        "q",
+        ""
+    ).strip()
+
+    roles = Role.objects.prefetch_related(
+        "permissions"
+    ).order_by(
+        "-is_default",
+        "role_name"
+    )
+
+    if search_query:
+        roles = roles.filter(
+            role_name__icontains=search_query
+        )
+
+    permissions = Permission.objects.all().order_by(
+        "permission_name"
+    )
 
     context = {
         "roles": roles,
-        "permissions": Permission.objects.all().order_by("permission_name"),
+        "permissions": permissions,
+
         "total_roles": Role.objects.count(),
-        "default_roles": Role.objects.filter(is_default=True).count(),
+
+        "default_roles": Role.objects.filter(
+            is_default=True
+        ).count(),
+
         "total_permissions": Permission.objects.count(),
     }
 
-    return render(request, "adminRoleList.html", context)
+    return render(
+        request,
+        "adminRoleList.html",
+        context
+    )
 
 @role_permission_required("Can Manage Roles")
 def admin_edit_role(request, role_id):
@@ -850,31 +2971,65 @@ def admin_delete_role(request, role_id):
     return redirect("admin_role_list")
 
 
-@role_permission_required("Can Manage Roles")
+@login_required
 def admin_role_permission(request, role_id):
-    role = get_object_or_404(Role, id=role_id)
-    permissions = Permission.objects.all().order_by("permission_name")
+
+    role = get_object_or_404(
+        Role,
+        id=role_id
+    )
+
+    permissions = Permission.objects.all().order_by(
+        "name"
+    )
 
     if request.method == "POST":
-        if role.is_default:
-            messages.error(request, "Default role permissions cannot be modified.")
-            return redirect("admin_role_list")
 
-        permission_ids = request.POST.getlist("permissions")
-        role.permissions.set(permission_ids)
+        selected_permissions = request.POST.getlist(
+            "permissions"
+        )
 
-        messages.success(request, "Permissions updated successfully.")
-        return redirect("admin_role_list")
+        role.permissions.set(
+            selected_permissions
+        )
 
-    return render(request, "adminRolePermission.html", {
+        if request.headers.get(
+            "X-Requested-With"
+        ) == "XMLHttpRequest":
+
+            return JsonResponse({
+                "status": "success",
+                "success": True,
+                "message": (
+                    f"Permissions updated for "
+                    f"{role.role_name}."
+                ),
+                "permission_count": (
+                    role.permissions.count()
+                ),
+            })
+
+        return redirect(
+            "admin_role_list"
+        )
+
+    context = {
         "role": role,
         "permissions": permissions,
-    })
+        "selected_permission_ids": list(
+            role.permissions.values_list(
+                "id",
+                flat=True
+            )
+        ),
+    }
 
+    return render(
+        request,
+        "adminRolePermission.html",
+        context
+    )
 
-# ==========================================================
-# ADMIN USERS
-# ==========================================================
 
 # ==========================================================
 # ADMIN USERS
@@ -1264,13 +3419,16 @@ def edit_product_admin(request, id):
             return JsonResponse({
                 "status": "success",
                 "message": "Product updated successfully.",
-                "product": {
+                "entity": {
+                    "type": "product",
                     "id": str(product.id),
-                    "name": product.product_name,
-                    "category": product.category.category_name,
-                    "price": str(product.price),
-                    "stock": product.stock_quantity,
-                    "status": "Active" if product.is_active else "Inactive",
+                    "fields": {
+                        "name": product.product_name,
+                        "category": product.category.category_name,
+                        "price": f"₹{product.price}",
+                        "stock": product.stock_quantity,
+                        "status": "Active" if product.is_active else "Inactive",
+                    }
                 }
             })
         
@@ -1294,6 +3452,350 @@ def delete_product_admin(request, id):
     messages.success(request, "Product deleted successfully.")
     return redirect("admin_products")
 
+@login_required
+def my_orders(request):
+    orders = (
+        Order.objects
+        .filter(user=request.user)
+        .order_by("-order_date")
+    )
+
+    return render(
+        request,
+        "myOrders.html",
+        {
+            "orders": orders,
+        }
+    )
+
+
+@login_required
+def my_order_details(request, id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related(
+            "items__product"
+        ),
+        id=id,
+        user=request.user
+    )
+
+    return render(
+        request,
+        "myOrderDetails.html",
+        {
+            "order": order,
+        }
+    )
+    
+@login_required
+def place_order(request):
+    if request.method != "POST":
+        return redirect("checkout")
+
+    address_id = request.POST.get("address_id")
+    payment_method = request.POST.get("payment_method", "COD")
+    razorpay_payment_id = request.POST.get("razorpay_payment_id")
+
+    if not address_id:
+        messages.error(request, "Please select delivery address.")
+        return redirect("checkout")
+
+    address = get_object_or_404(
+        UserAddress,
+        id=address_id,
+        user=request.user
+    )
+
+    cart = get_object_or_404(Cart, user=request.user)
+    price_updated_items = refresh_cart_prices(cart)
+
+    cart_items = (
+        CartItem.objects
+        .filter(cart=cart)
+        .select_related("product")
+    )
+
+    if not cart_items.exists():
+        messages.error(request, "Your cart is empty.")
+        return redirect("cart")
+
+    for item in cart_items:
+        if item.quantity > item.product.stock_quantity:
+            messages.error(
+                request,
+                f"Only {item.product.stock_quantity} unit(s) of "
+                f"{item.product.product_name} are available."
+            )
+            return redirect("checkout")
+
+    subtotal = sum(
+        (item.price * item.quantity for item in cart_items),
+        Decimal("0.00")
+    )
+
+    shipping = (
+        Decimal("0.00")
+        if subtotal >= Decimal("999.00") and subtotal > 0
+        else Decimal("99.00")
+    )
+
+    total_amount = subtotal + shipping
+
+    order = Order.objects.create(
+        user=request.user,
+        address=address,
+        order_number=f"VELORA-{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
+        total_amount=total_amount,
+        order_status="Pending",
+        payment_status="Paid" if razorpay_payment_id else "Pending",
+    )
+
+    for item in cart_items:
+        product = item.product
+        active_deal = product.get_active_deal()
+        original_price = product.price
+        final_price = product.get_final_price()
+        item_total = final_price * item.quantity
+
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            product_name=product.product_name,
+            quantity=item.quantity,
+            original_price=original_price,
+            price=final_price,
+            discount_amount=max(
+                original_price - final_price,
+                Decimal("0.00")
+            ),
+            total_price=item_total,
+            deal=active_deal,
+        )
+
+        product.stock_quantity -= item.quantity
+        product.save(update_fields=["stock_quantity"])
+
+    cart_items.delete()
+
+    if price_updated_items:
+        messages.info(
+            request,
+            "Your cart prices were refreshed before placing the order."
+        )
+
+    messages.success(request, "Order placed successfully.")
+    return redirect("my_order_details", id=order.id)
+
+
+@login_required
+def cancel_order(request, id):
+    order = get_object_or_404(Order, id=id, user=request.user)
+
+    if order.order_status in ["Delivered", "Cancelled"]:
+        messages.error(request, "This order cannot be cancelled.")
+        return redirect("my_orders")
+
+    order.order_status = "Cancelled"
+    order.save()
+
+    messages.success(request, "Order cancelled successfully.")
+    return redirect("my_orders")
+
+@login_required
+def download_invoice(request, id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items"),
+        id=id,
+        user=request.user
+    )
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice-{order.order_number}.pdf"'
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 20)
+    p.drawString(50, 800, "Velora Invoice")
+
+    p.setFont("Helvetica", 12)
+    p.drawString(50, 760, f"Order No: {order.order_number}")
+    p.drawString(50, 740, f"Date: {order.order_date.strftime('%d %b %Y')}")
+    p.drawString(50, 720, f"Customer: {order.user.username}")
+    p.drawString(50, 700, f"Status: {order.order_status}")
+    p.drawString(50, 680, f"Payment: {order.payment_status}")
+
+    y = 640
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y, "Product")
+    p.drawString(300, y, "Qty")
+    p.drawString(380, y, "Price")
+    p.drawString(470, y, "Total")
+
+    y -= 25
+    p.setFont("Helvetica", 11)
+
+    for item in order.items.all():
+        p.drawString(50, y, item.product_name[:30])
+        p.drawString(300, y, str(item.quantity))
+        p.drawString(380, y, f"Rs. {item.price}")
+        p.drawString(470, y, f"Rs. {item.total_price}")
+        y -= 22
+
+    y -= 20
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(380, y, "Grand Total:")
+    p.drawString(470, y, f"Rs. {order.total_amount}")
+
+    p.showPage()
+    p.save()
+
+    return response
+
+
+# ==========================================================
+# ADMIN DEAL MANAGEMENT
+# ==========================================================
+
+@role_permission_required("Can Manage Products")
+@login_required
+def admin_deals(request):
+    deals_qs = (
+        Deal.objects
+        .prefetch_related("products", "categories")
+        .all()
+    )
+
+    query = request.GET.get("q", "").strip()
+
+    if query:
+        deals_qs = deals_qs.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(products__product_name__icontains=query) |
+            Q(categories__category_name__icontains=query)
+        ).distinct()
+
+    deals_list = list(deals_qs)
+
+    context = {
+        "deals": deals_list,
+        "deal_form": DealForm(),
+        "search_query": query,
+        "total_deals": len(deals_list),
+        "active_deals": sum(1 for deal in deals_list if deal.status == "active"),
+        "scheduled_deals": sum(1 for deal in deals_list if deal.status == "scheduled"),
+        "expired_deals": sum(1 for deal in deals_list if deal.status == "expired"),
+        "inactive_deals": sum(1 for deal in deals_list if deal.status == "inactive"),
+    }
+
+    context.update(get_admin_permissions_context(request.user))
+
+    return render(request, "adminDeals.html", context)
+
+
+@role_permission_required("Can Manage Products")
+@login_required
+@require_POST
+def admin_save_deal(request):
+    deal_id = request.POST.get("deal_id")
+    deal = None
+
+    if deal_id:
+        deal = get_object_or_404(Deal, id=deal_id)
+
+    form = DealForm(
+        request.POST,
+        request.FILES,
+        instance=deal
+    )
+
+    if not form.is_valid():
+        errors = {
+            field: [str(message) for message in messages_list]
+            for field, messages_list in form.errors.items()
+        }
+
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": "Please correct the form errors.",
+            "errors": errors,
+        }, status=400)
+
+    saved_deal = form.save()
+
+    return JsonResponse({
+    "success": True,
+    "status": "success",
+    "message": (
+        "Deal updated successfully."
+        if deal else
+        "Deal created successfully."
+    ),
+    "deal_id": str(saved_deal.id),
+})
+
+
+@role_permission_required("Can Manage Products")
+@login_required
+def admin_deal_details(request, deal_id):
+    deal = get_object_or_404(Deal, id=deal_id)
+
+    return JsonResponse({
+        "success": True,
+        "deal": {
+            "id": str(deal.id),
+            "title": deal.title,
+            "description": deal.description or "",
+            "discount_type": deal.discount_type,
+            "discount_value": str(deal.discount_value),
+            "products": [str(product.id) for product in deal.products.all()],
+            "categories": [str(category.id) for category in deal.categories.all()],
+            "start_date": timezone.localtime(deal.start_date).strftime("%Y-%m-%dT%H:%M"),
+            "end_date": timezone.localtime(deal.end_date).strftime("%Y-%m-%dT%H:%M"),
+            "priority": deal.priority,
+            "is_active": deal.is_active,
+            "banner_image": deal.banner_image.url if deal.banner_image else "",
+        }
+    })
+
+
+@role_permission_required("Can Manage Products")
+@login_required
+@require_POST
+def admin_toggle_deal(request, deal_id):
+    deal = get_object_or_404(Deal, id=deal_id)
+    deal.is_active = not deal.is_active
+    deal.save(update_fields=["is_active", "updated_at"])
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": (
+            "Deal activated successfully."
+            if deal.is_active else
+            "Deal deactivated successfully."
+        ),
+        "is_active": deal.is_active,
+        "deal_status": deal.status,
+    })
+
+
+@role_permission_required("Can Manage Products")
+@login_required
+@require_POST
+def admin_delete_deal(request, deal_id):
+    deal = get_object_or_404(Deal, id=deal_id)
+    deal.delete()
+
+    return JsonResponse({
+        "success": True,
+        "status": "success",
+        "message": "Deal deleted successfully.",
+        "deleted_id": str(deal_id),
+    })
+
+
 # ==========================================================
 # ADMIN SALES
 # ==========================================================
@@ -1303,7 +3805,7 @@ def delete_product_admin(request, id):
 def admin_orders(request):
     query = request.GET.get("q", "")
 
-    orders = Order.objects.all().order_by("-order_date")
+    orders = Order.objects.select_related("user").prefetch_related("items").order_by("-order_date")
 
     if query:
         orders = orders.filter(
@@ -1321,6 +3823,53 @@ def admin_orders(request):
     }
 
     return render(request, "adminOrders.html", context)
+
+
+@role_permission_required("Can Manage Orders")
+@login_required
+def update_order_status(request, id):
+    order = get_object_or_404(Order, id=id)
+
+    if request.method == "POST":
+        status = request.POST.get("order_status")
+
+        if status:
+            order.order_status = status
+            order.save()
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+           return JsonResponse({
+               "status": "success",
+               "message": "Order status updated.",
+               "entity": {
+                   "type": "order",
+                   "id": str(order.id),
+                   "fields": {
+                       "status": order.order_status,
+                   }
+               }
+           })
+
+        messages.success(request, "Order status updated.")
+        return redirect("admin_orders")
+
+    return redirect("admin_orders")
+
+
+@role_permission_required("Can Manage Orders")
+@login_required
+def delete_order_admin(request, id):
+    order = get_object_or_404(Order, id=id)
+    order.delete()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({
+            "status": "success",
+            "message": "Order deleted successfully."
+        })
+
+    messages.success(request, "Order deleted successfully.")
+    return redirect("admin_orders")
 
 @login_required
 def admin_payments(request):
@@ -1540,3 +4089,99 @@ def import_products(request):
     else:
         messages.success(request, msg)
     return redirect("admin_products")
+
+# ==========================================================
+# COMMON BLOG QUERY HELPERS
+# ==========================================================
+
+def get_blog_posts_queryset():
+    """
+    Reusable BlogPost queryset used by admin and website pages.
+    """
+
+    return (
+        BlogPost.objects
+        .select_related(
+            "category",
+            "author"
+        )
+        .order_by("-published_at")
+    )
+
+
+def get_published_blog_posts():
+    """
+    Only posts currently visible on the customer website.
+    """
+
+    return (
+        get_blog_posts_queryset()
+        .filter(
+            is_published=True,
+            published_at__lte=timezone.now()
+        )
+    )
+
+
+def blog_post_json(post):
+    """
+    Reusable BlogPost JSON data for AJAX responses.
+    """
+
+    return {
+        "id": str(post.id),
+        "title": post.title,
+        "slug": post.slug,
+
+        "category": (
+            post.category.category_name
+            if post.category else
+            "Uncategorized"
+        ),
+
+        "category_id": (
+            str(post.category.id)
+            if post.category else
+            ""
+        ),
+
+        "short_description": (
+            post.short_description
+        ),
+
+        "content": post.content,
+
+        "image": (
+            post.image.url
+            if post.image else
+            ""
+        ),
+
+        "is_featured": post.is_featured,
+        "is_published": post.is_published,
+        "status": post.status_text,
+
+        "published_at": timezone.localtime(
+            post.published_at
+        ).strftime("%Y-%m-%dT%H:%M"),
+
+        "published_date": timezone.localtime(
+            post.published_at
+        ).strftime("%d %b %Y"),
+
+        "views_count": post.views_count,
+    }
+
+
+def blog_category_json(category):
+    """
+    Reusable BlogCategory JSON data for AJAX responses.
+    """
+
+    return {
+        "id": str(category.id),
+        "category_name": category.category_name,
+        "description": category.description or "",
+        "is_active": category.is_active,
+        "posts_count": category.posts.count(),
+    }

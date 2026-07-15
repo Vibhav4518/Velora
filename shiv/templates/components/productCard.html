@@ -1,0 +1,356 @@
+{% load static %}
+
+<article
+  class="velora-unified-product-card"
+  data-product-card
+  data-product-name="{{ card_product.product_name|lower }}"
+  data-product-category="{{ card_product.category.category_name|lower }}"
+  data-product-price="{{ card_product.current_price|default:card_product.price }}"
+>
+
+  <!-- ================================================= -->
+  <!-- PRODUCT IMAGE -->
+  <!-- ================================================= -->
+
+  <div class="velora-unified-product-media">
+
+    <a
+      href="{% url 'product_details' card_product.id %}"
+      class="velora-unified-product-image-link"
+    >
+
+      {% if card_product.images.first %}
+
+        <img
+          src="{{ card_product.images.first.image.url }}"
+          alt="{{ card_product.product_name }}"
+          loading="lazy"
+        >
+
+      {% else %}
+
+        <div class="velora-unified-product-placeholder">
+
+          <i class="bi bi-image"></i>
+
+        </div>
+
+      {% endif %}
+
+    </a>
+
+
+    <!-- Deal badge -->
+
+    {% if card_product.has_active_deal %}
+
+      <span class="velora-unified-deal-badge">
+
+        {% if card_product.discount_percentage %}
+
+          {{ card_product.discount_percentage|floatformat:0 }}% OFF
+
+        {% else %}
+
+          Deal
+
+        {% endif %}
+
+      </span>
+
+    {% endif %}
+
+
+    <!-- Stock badge -->
+
+    {% if card_product.stock_quantity <= 0 %}
+
+      <span class="velora-unified-stock-badge out">
+        Out of Stock
+      </span>
+
+    {% elif card_product.stock_quantity <= 5 %}
+
+      <span class="velora-unified-stock-badge low">
+
+        Only {{ card_product.stock_quantity }} left
+
+      </span>
+
+    {% endif %}
+
+
+    <!-- Image actions -->
+
+    <div class="velora-unified-card-actions">
+
+      <a
+        href="{% url 'product_details' card_product.id %}"
+        class="velora-unified-icon-btn"
+        aria-label="View {{ card_product.product_name }}"
+      >
+        <i class="bi bi-search"></i>
+      </a>
+
+
+      <button
+        type="button"
+        class="velora-unified-icon-btn wishlist-btn"
+        data-url="{% url 'add_to_wishlist' card_product.id %}"
+        aria-label="Add {{ card_product.product_name }} to wishlist"
+      >
+
+        {% if card_product.id in wishlist_product_ids %}
+
+          <i class="bi bi-heart-fill text-danger"></i>
+
+        {% else %}
+
+          <i class="bi bi-heart"></i>
+
+        {% endif %}
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- PRODUCT CONTENT -->
+  <!-- ================================================= -->
+
+  <div class="velora-unified-product-content">
+
+    <!-- Category and rating -->
+
+    <div class="velora-unified-product-top">
+
+      <a
+        href="{% url 'shop_page' %}?category={{ card_product.category.id }}"
+        class="velora-unified-category"
+      >
+        {{ card_product.category.category_name }}
+      </a>
+
+
+      <div class="velora-unified-rating">
+
+        <i class="bi bi-star-fill"></i>
+
+        <strong>
+          {{ card_product.average_rating|default:0|floatformat:1 }}
+        </strong>
+
+        <small>
+          ({{ card_product.review_count|default:0 }})
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <!-- Product title -->
+
+    <h3 class="velora-unified-product-title">
+
+      <a href="{% url 'product_details' card_product.id %}">
+
+        {{ card_product.product_name }}
+
+      </a>
+
+    </h3>
+
+
+    <!-- Description -->
+
+    <p class="velora-unified-description">
+
+      {% if card_product.short_description %}
+
+        {{ card_product.short_description|truncatechars:62 }}
+
+      {% else %}
+
+        Discover this premium Velora product.
+
+      {% endif %}
+
+    </p>
+
+
+    <!-- ================================================= -->
+    <!-- PRICE -->
+    <!-- ================================================= -->
+
+    <div class="velora-unified-price-section">
+
+      {% if card_product.has_active_deal %}
+
+        <div class="velora-unified-price-row">
+
+          <strong class="velora-unified-current-price">
+
+            ₹{{ card_product.current_price|floatformat:2 }}
+
+          </strong>
+
+
+          {% if card_product.current_price < card_product.price %}
+
+            <del class="velora-unified-old-price">
+
+              ₹{{ card_product.price|floatformat:2 }}
+
+            </del>
+
+          {% endif %}
+
+        </div>
+
+
+        <div class="velora-unified-saving">
+
+          {% if card_product.get_discount_amount %}
+
+            <i class="bi bi-tag-fill"></i>
+
+            Save ₹{{ card_product.get_discount_amount|floatformat:2 }}
+
+          {% else %}
+
+            &nbsp;
+
+          {% endif %}
+
+        </div>
+
+
+      {% else %}
+
+        <div class="velora-unified-price-row">
+
+          <strong class="velora-unified-current-price">
+
+            ₹{{ card_product.price|floatformat:2 }}
+
+          </strong>
+
+        </div>
+
+
+        <div class="velora-unified-saving">
+
+          &nbsp;
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- DEAL TIMER -->
+    <!-- ================================================= -->
+
+    {% with card_deal=card_product.get_active_deal %}
+
+      <div
+        class="velora-unified-deal-timer {% if not card_deal %}is-hidden{% endif %}"
+        {% if card_deal %}
+          data-product-deal-timer
+          data-deal-end="{{ card_deal.end_date|date:'c' }}"
+        {% endif %}
+      >
+
+        {% if card_deal %}
+
+          <span>
+
+            <i class="bi bi-clock"></i>
+
+            Ends in
+
+          </span>
+
+
+          <strong data-deal-countdown>
+
+            --:--:--
+
+          </strong>
+
+        {% else %}
+
+          <span>
+            &nbsp;
+          </span>
+
+          <strong>
+            &nbsp;
+          </strong>
+
+        {% endif %}
+
+      </div>
+
+    {% endwith %}
+
+
+    <!-- ================================================= -->
+    <!-- CARD BUTTONS -->
+    <!-- ================================================= -->
+
+    <div class="velora-unified-product-footer">
+
+      {% if card_product.stock_quantity > 0 %}
+
+        <button
+          type="button"
+          class="velora-unified-cart-btn add-cart-btn"
+          data-url="{% url 'add_to_cart' card_product.id %}"
+          data-quantity="1"
+        >
+
+          <i class="bi bi-cart-plus"></i>
+
+          Add to Cart
+
+        </button>
+
+
+      {% else %}
+
+        <button
+          type="button"
+          class="velora-unified-cart-btn disabled"
+          disabled
+        >
+
+          <i class="bi bi-x-circle"></i>
+
+          Unavailable
+
+        </button>
+
+      {% endif %}
+
+
+      <a
+        href="{% url 'product_details' card_product.id %}"
+        class="velora-unified-view-btn"
+      >
+
+        View
+
+      </a>
+
+    </div>
+
+  </div>
+
+</article>

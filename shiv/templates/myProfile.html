@@ -267,7 +267,20 @@
           <div class="account-card">
             <div class="account-card-head">
               <h4>Wishlist</h4>
-              <a href="{% url 'wishlist_page' %}" class="primary-btn">View All</a>
+              {% if user.is_authenticated %}
+
+<a href="{% url 'wishlist_page' %}" class="primary-btn">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+              View All</a>
+
+
+
             </div>
 
             {% for item in wishlist_items %}
@@ -277,7 +290,21 @@
                   <p>₹{{ item.product.price }}</p>
                 </div>
 
-                <a href="{% url 'wishlist_page' %}" class="set-btn">Open Wishlist</a>
+                
+
+{% if user.is_authenticated %}
+
+<a href="{% url 'wishlist_page' %}" class="set-btn">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+
+Open Wishlist</a>
+
               </div>
             {% empty %}
               <p class="empty-text">Your wishlist is empty.</p>

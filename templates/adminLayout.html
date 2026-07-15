@@ -81,16 +81,28 @@
 
     <div class="collapse sidebar-submenu" id="catalogMenu">
 
-      {% if can_manage_products %}
-      <a href="{% url 'admin_products' %}">Products</a>
-      {% endif %}
+    {% if can_manage_products %}
+    <a href="{% url 'admin_products' %}">
+        <i class="bi bi-box-seam me-2"></i>
+        Products
+    </a>
+    {% endif %}
 
+    {% if can_manage_categories %}
+    <a href="{% url 'category_list' %}">
+        <i class="bi bi-tags me-2"></i>
+        Categories
+    </a>
+    {% endif %}
 
-      {% if can_manage_categories %}
-      <a href="{% url 'category_list' %}">Categories</a>
-      {% endif %}
+    {% if can_manage_blog %}
+    <a href="{% url 'admin_blog_posts' %}">
+        <i class="bi bi-journal-richtext me-2"></i>
+        Blog Management
+    </a>
+    {% endif %}
 
-    </div>
+</div>
   </li>
   {% endif %}
 
@@ -107,7 +119,7 @@
       {% if can_manage_orders %}
       <a href="{% url 'admin_orders' %}">Orders</a>
       {% endif %}
-
+<a href="{% url 'admin_deals' %}">Deals</a>
       {% if can_manage_payments %}
       <a href="{% url 'admin_payments' %}">Payments</a>
       {% endif %}
@@ -146,6 +158,17 @@
     <i class="bi bi-moon-stars me-2"></i>
     <span id="themeToggleText">Dark Mode</span>
   </a>
+  {% if can_manage_customers %}
+
+  <a href="{% url 'admin_contact_messages' %}">
+
+    <i class="bi bi-chat-left-text me-2"></i>
+
+    Contact Messages
+
+  </a>
+
+{% endif %}
       <a href="{% url 'logout_user' %}" class="text-danger">Logout</a>
     </div>
   </li>

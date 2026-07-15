@@ -1,0 +1,1598 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div
+  class="admin-blog-page"
+  id="adminBlogPage"
+  data-blog-details-base-url="/admin/blogs/"
+>
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="admin-users-header">
+
+    <div>
+      <h3>Blog Management</h3>
+
+      <p>
+        Create, publish and manage Velora blog content.
+      </p>
+    </div>
+
+
+    <div class="d-flex gap-2 flex-wrap">
+
+      <button
+        type="button"
+        class="btn btn-light rounded-pill px-4"
+        id="openAddBlogCategoryBtn"
+      >
+        <i class="bi bi-folder-plus me-2"></i>
+        Add Category
+      </button>
+
+
+      <button
+        type="button"
+        class="add-admin-btn border-0"
+        data-bs-toggle="modal"
+        data-bs-target="#blogPostModal"
+        id="openAddBlogBtn"
+      >
+        <i class="bi bi-plus-circle me-2"></i>
+        Add Blog Post
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- STATS -->
+  <!-- ================================================= -->
+
+  <div class="row g-4 mb-4">
+
+    <!-- Total posts -->
+
+    <div class="col-xl-3 col-md-6">
+
+      <div class="product-small-card">
+
+        <div>
+          <p>Total Posts</p>
+
+          <h3>
+            {{ total_posts }}
+          </h3>
+        </div>
+
+        <div class="product-small-icon bg-blue">
+          <i class="bi bi-journal-richtext"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Published -->
+
+    <div class="col-xl-3 col-md-6">
+
+      <div class="product-small-card">
+
+        <div>
+          <p>Published</p>
+
+          <h3>
+            {{ published_posts }}
+          </h3>
+        </div>
+
+        <div class="product-small-icon bg-green">
+          <i class="bi bi-check-circle"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Drafts -->
+
+    <div class="col-xl-3 col-md-6">
+
+      <div class="product-small-card">
+
+        <div>
+          <p>Draft Posts</p>
+
+          <h3>
+            {{ draft_posts }}
+          </h3>
+        </div>
+
+        <div class="product-small-icon bg-orange">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- Clickable Categories card -->
+
+    <div class="col-xl-3 col-md-6">
+
+      <button
+        type="button"
+        class="product-small-card blog-category-stat-card w-100 border-0 text-start"
+        data-bs-toggle="modal"
+        data-bs-target="#blogCategoriesModal"
+      >
+
+        <div>
+          <p>Categories</p>
+
+          <h3 id="blogCategoryTotalCount">
+            {{ total_blog_categories }}
+          </h3>
+
+          <small class="text-primary fw-semibold">
+            Click to manage
+          </small>
+        </div>
+
+        <div class="product-small-icon bg-purple">
+          <i class="bi bi-folder"></i>
+        </div>
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- BLOG TABLE -->
+  <!-- ================================================= -->
+
+  <div class="admin-user-table-card">
+
+    <div class="table-top">
+
+      <div>
+        <h4 class="mb-1">
+          Blog Posts
+        </h4>
+
+        <p class="text-muted mb-0">
+          Manage published, draft and featured posts.
+        </p>
+      </div>
+
+
+      <form
+        method="GET"
+        action="{% url 'admin_blog_posts' %}"
+        class="search-box"
+      >
+
+        <input
+          type="text"
+          name="q"
+          class="form-control"
+          placeholder="Search blog post..."
+          value="{{ search_query }}"
+          autocomplete="off"
+        >
+
+        <button type="submit">
+          <i class="bi bi-search"></i>
+        </button>
+
+      </form>
+
+    </div>
+
+
+    <div class="table-responsive">
+
+      <table class="table admin-user-table align-middle mb-0">
+
+        <thead>
+          <tr>
+            <th>Post</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Views</th>
+            <th>Published</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+
+
+        <tbody>
+
+          {% for post in posts %}
+
+            <tr id="blog-row-{{ post.id }}">
+
+              <!-- Post -->
+
+              <td>
+
+                <div class="d-flex align-items-center gap-3">
+
+                  {% if post.image %}
+
+                    <img
+                      src="{{ post.image.url }}"
+                      alt="{{ post.title }}"
+                      class="order-item-image"
+                    >
+
+                  {% else %}
+
+                    <div class="role-icon">
+                      <i class="bi bi-image"></i>
+                    </div>
+
+                  {% endif %}
+
+
+                  <div>
+
+                    <h6 class="mb-1 fw-bold">
+                      {{ post.title|truncatechars:48 }}
+                    </h6>
+
+                    <small class="text-muted">
+
+                      {% if post.author %}
+                        {{ post.author.username }}
+                      {% else %}
+                        Velora Team
+                      {% endif %}
+
+                    </small>
+
+                  </div>
+
+                </div>
+
+              </td>
+
+
+              <!-- Category -->
+
+              <td>
+
+                <span class="role-pill gray">
+
+                  {% if post.category %}
+                    {{ post.category.category_name }}
+                  {% else %}
+                    Uncategorized
+                  {% endif %}
+
+                </span>
+
+              </td>
+
+
+              <!-- Status -->
+
+              <td>
+
+                {% if post.status_text == "Published" %}
+
+                  <span class="status active">
+                    Published
+                  </span>
+
+                {% elif post.status_text == "Scheduled" %}
+
+                  <span class="role-pill">
+                    Scheduled
+                  </span>
+
+                {% else %}
+
+                  <span class="role-pill gray">
+                    Draft
+                  </span>
+
+                {% endif %}
+
+
+                {% if post.is_featured %}
+
+                  <span class="badge bg-warning text-dark ms-1">
+                    Featured
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- Views -->
+
+              <td>
+                <i class="bi bi-eye me-1 text-primary"></i>
+                {{ post.views_count }}
+              </td>
+
+
+              <!-- Published date -->
+
+              <td>
+
+                {% if post.published_at %}
+                  {{ post.published_at|date:"d M Y" }}
+                {% else %}
+                  <span class="text-muted">Not published</span>
+                {% endif %}
+
+              </td>
+
+
+              <!-- Actions -->
+
+              <td class="text-end">
+
+                <div class="dropdown">
+
+                  <button
+                    type="button"
+                    class="action-dropdown-btn"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+
+
+                 <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
+
+  <!-- View in popup -->
+  <li>
+    <button
+      type="button"
+      class="dropdown-item view-blog-post-btn"
+      data-details-url="{% url 'admin_blog_post_details' post.id %}"
+    >
+      <i class="bi bi-eye me-2"></i>
+      View Post
+    </button>
+  </li>
+
+  <!-- Edit -->
+  <li>
+    <button
+      type="button"
+      class="dropdown-item edit-blog-btn"
+      data-details-url="{% url 'admin_blog_post_details' post.id %}"
+    >
+      <i class="bi bi-pencil-square me-2"></i>
+      Edit Post
+    </button>
+  </li>
+
+  <!-- Publish / draft -->
+  <li>
+    <button
+      type="button"
+      class="dropdown-item blog-toggle-action"
+      data-url="{% url 'admin_toggle_blog_status' post.id %}"
+      data-post-title="{{ post.title }}"
+      data-action-type="{% if post.is_published %}draft{% else %}publish{% endif %}"
+    >
+      <i class="bi bi-arrow-repeat me-2"></i>
+
+      {% if post.is_published %}
+        Move to Draft
+      {% else %}
+        Publish Post
+      {% endif %}
+    </button>
+  </li>
+
+  <!-- Featured -->
+  <li>
+    <button
+      type="button"
+      class="dropdown-item blog-toggle-action"
+      data-url="{% url 'admin_toggle_blog_feature' post.id %}"
+      data-post-title="{{ post.title }}"
+      data-action-type="{% if post.is_featured %}unfeature{% else %}feature{% endif %}"
+    >
+      <i class="bi bi-star me-2"></i>
+
+      {% if post.is_featured %}
+        Remove Featured
+      {% else %}
+        Mark Featured
+      {% endif %}
+    </button>
+  </li>
+
+  <li>
+    <hr class="dropdown-divider">
+  </li>
+
+  <!-- Delete -->
+  <li>
+    <button
+      type="button"
+      class="dropdown-item text-danger blog-delete-btn"
+      data-url="{% url 'admin_delete_blog_post' post.id %}"
+      data-row="#blog-row-{{ post.id }}"
+      data-post-title="{{ post.title }}"
+    >
+      <i class="bi bi-trash me-2"></i>
+      Delete Post
+    </button>
+  </li>
+
+</ul>
+
+                </div>
+
+              </td>
+
+            </tr>
+
+
+          {% empty %}
+
+            <tr>
+
+              <td
+                colspan="6"
+                class="text-center py-5"
+              >
+
+                <div class="empty-admin-state">
+
+                  <div class="empty-admin-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+
+                  <h5>
+                    No blog posts found
+                  </h5>
+
+                  <p class="text-muted">
+                    Create your first Velora blog post.
+                  </p>
+
+                  <button
+                    type="button"
+                    class="add-admin-btn border-0"
+                    data-bs-toggle="modal"
+                    data-bs-target="#blogPostModal"
+                  >
+                    Add Blog Post
+                  </button>
+
+                </div>
+
+              </td>
+
+            </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- ADD / EDIT BLOG POST MODAL -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="blogPostModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header">
+
+        <div>
+
+          <h5
+            class="modal-title"
+            id="blogPostModalTitle"
+          >
+            Add Blog Post
+          </h5>
+
+          <p class="text-muted mb-0">
+            Create content for the Velora Blog page.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+
+      </div>
+
+
+      <form
+        method="POST"
+        enctype="multipart/form-data"
+        action="{% url 'admin_save_blog_post' %}"
+        id="blogPostForm"
+        class="ajax-form"
+      >
+        {% csrf_token %}
+
+        <input
+          type="hidden"
+          name="post_id"
+          id="blogPostId"
+          value=""
+        >
+
+
+        <div class="modal-body">
+
+          <div class="alert alert-danger d-none ajax-form-errors"></div>
+
+          <div class="row g-3">
+
+            <div class="col-md-8">
+
+              <label class="form-label fw-semibold">
+                Blog Title
+              </label>
+
+              {{ blog_form.title }}
+
+            </div>
+
+
+            <div class="col-md-4">
+
+              <label class="form-label fw-semibold">
+                Category
+              </label>
+
+              {{ blog_form.category }}
+
+            </div>
+
+
+            <div class="col-12">
+
+              <label class="form-label fw-semibold">
+                Short Description
+              </label>
+
+              {{ blog_form.short_description }}
+
+            </div>
+
+
+            <div class="col-12">
+
+              <label class="form-label fw-semibold">
+                Full Content
+              </label>
+
+              {{ blog_form.content }}
+
+            </div>
+
+
+            <div class="col-md-6">
+
+              <label class="form-label fw-semibold">
+                Featured Image
+              </label>
+
+              {{ blog_form.image }}
+
+            </div>
+
+
+            <div class="col-md-6">
+
+              <label class="form-label fw-semibold">
+                Publish Date
+              </label>
+
+              {{ blog_form.published_at }}
+
+            </div>
+
+
+            <div class="col-md-6">
+
+              <label class="permission-card-option">
+
+                {{ blog_form.is_published }}
+
+                <span class="permission-card-icon">
+                  <i class="bi bi-globe"></i>
+                </span>
+
+                <span class="permission-card-text">
+
+                  <h6>
+                    Publish Post
+                  </h6>
+
+                  <small>
+                    Show this article on the website.
+                  </small>
+
+                </span>
+
+                <span class="permission-card-check">
+                  <i class="bi bi-check-lg"></i>
+                </span>
+
+              </label>
+
+            </div>
+
+
+            <div class="col-md-6">
+
+              <label class="permission-card-option">
+
+                {{ blog_form.is_featured }}
+
+                <span class="permission-card-icon">
+                  <i class="bi bi-star"></i>
+                </span>
+
+                <span class="permission-card-text">
+
+                  <h6>
+                    Featured Post
+                  </h6>
+
+                  <small>
+                    Display in the featured section.
+                  </small>
+
+                </span>
+
+                <span class="permission-card-check">
+                  <i class="bi bi-check-lg"></i>
+                </span>
+
+              </label>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+          <button
+            type="button"
+            class="btn btn-light border"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="submit"
+            class="product-submit-btn"
+          >
+            <i class="bi bi-check-circle me-2"></i>
+
+            <span id="blogPostSaveText">
+              Save Blog Post
+            </span>
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- BLOG CATEGORIES MANAGEMENT MODAL -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="blogCategoriesModal"
+  tabindex="-1"
+  aria-labelledby="blogCategoriesModalLabel"
+  aria-hidden="true"
+>
+
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+    <div class="modal-content admin-view-modal blog-category-manager-modal">
+
+      <!-- Header -->
+
+      <div class="modal-header blog-category-modal-header">
+
+        <div>
+
+          <span class="blog-modal-label">
+            <i class="bi bi-folder2-open"></i>
+            Blog Management
+          </span>
+
+          <h5
+            class="modal-title"
+            id="blogCategoriesModalLabel"
+          >
+            Manage Blog Categories
+          </h5>
+
+          <p class="mb-0">
+            View, edit, activate or delete blog categories.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+
+      </div>
+
+
+      <!-- Body -->
+
+      <div class="modal-body">
+
+        <div class="blog-category-modal-toolbar">
+
+          <div class="blog-category-search-box">
+
+            <i class="bi bi-search"></i>
+
+            <input
+              type="search"
+              id="blogCategorySearchInput"
+              placeholder="Search category..."
+              autocomplete="off"
+            >
+
+            <button
+              type="button"
+              id="clearBlogCategorySearch"
+              class="d-none"
+              aria-label="Clear search"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="product-submit-btn"
+            id="openAddBlogCategoryFromList"
+          >
+            <i class="bi bi-plus-circle me-2"></i>
+            Add Category
+          </button>
+
+        </div>
+
+
+        <div
+          class="table-responsive"
+          id="blogCategoryTableWrapper"
+        >
+
+          <table class="table align-middle blog-category-table mb-0">
+
+            <thead>
+
+              <tr>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Posts</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+
+            </thead>
+
+
+            <tbody id="blogCategoryTableBody">
+
+              {% for category in categories %}
+
+                <tr
+                  id="blog-category-row-{{ category.id }}"
+                  data-blog-category-row
+                  data-category-name="{{ category.category_name|lower }}"
+                  data-category-description="{{ category.description|default:''|lower }}"
+                >
+
+                  <!-- Category -->
+
+                  <td>
+
+                    <div class="blog-category-info">
+
+                      <div class="blog-category-icon">
+                        <i class="bi bi-folder2"></i>
+                      </div>
+
+                      <div>
+
+                        <h6>
+                          {{ category.category_name }}
+                        </h6>
+
+                        <small>
+                          Blog category
+                        </small>
+
+                      </div>
+
+                    </div>
+
+                  </td>
+
+
+                  <!-- Description -->
+
+                  <td>
+
+                    <p class="blog-category-description">
+                      {{ category.description|default:"No description added"|truncatechars:75 }}
+                    </p>
+
+                  </td>
+
+
+                  <!-- Posts -->
+
+                  <td>
+
+                    <span class="blog-category-post-count">
+
+                      {{ category.total_posts|default:0 }}
+
+                      Post{{ category.total_posts|default:0|pluralize }}
+
+                    </span>
+
+                  </td>
+
+
+                  <!-- Status -->
+
+                  <td>
+
+                    {% if category.is_active %}
+
+                      <span class="blog-category-status active">
+
+                        <i class="bi bi-check-circle-fill"></i>
+
+                        Active
+
+                      </span>
+
+                    {% else %}
+
+                      <span class="blog-category-status inactive">
+
+                        <i class="bi bi-pause-circle-fill"></i>
+
+                        Inactive
+
+                      </span>
+
+                    {% endif %}
+
+                  </td>
+
+
+                  <!-- Actions -->
+
+                  <td class="text-end">
+
+                    <div class="dropdown">
+
+                      <button
+                        type="button"
+                        class="action-dropdown-btn"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                      >
+                        <i class="bi bi-three-dots-vertical"></i>
+                      </button>
+
+
+                      <ul class="dropdown-menu dropdown-menu-end admin-action-menu">
+
+                        <!-- View -->
+
+                        <li>
+
+                          <button
+                            type="button"
+                            class="dropdown-item view-blog-category-btn"
+                            data-category-id="{{ category.id }}"
+                            data-category-name="{{ category.category_name }}"
+                            data-category-description="{{ category.description|default:'No description added' }}"
+                            data-category-status="{% if category.is_active %}Active{% else %}Inactive{% endif %}"
+                            data-category-posts="{{ category.total_posts|default:0 }}"
+                          >
+                            <i class="bi bi-eye me-2"></i>
+                            View Category
+                          </button>
+
+                        </li>
+
+
+                        <!-- Edit -->
+
+                        <li>
+
+                          <button
+                            type="button"
+                            class="dropdown-item edit-blog-category-btn"
+                            data-details-url="{% url 'admin_blog_category_details' category.id %}"
+                          >
+                            <i class="bi bi-pencil-square me-2"></i>
+                            Edit Category
+                          </button>
+
+                        </li>
+
+
+                        <!-- Toggle -->
+
+                        <li>
+
+                          <button
+                            type="button"
+                            class="dropdown-item toggle-blog-category-btn"
+                            data-url="{% url 'admin_toggle_blog_category_status' category.id %}"
+                            data-active="{% if category.is_active %}true{% else %}false{% endif %}"
+                            data-category-name="{{ category.category_name }}"
+                          >
+
+                            {% if category.is_active %}
+
+                              <i class="bi bi-pause-circle me-2"></i>
+                              Deactivate
+
+                            {% else %}
+
+                              <i class="bi bi-play-circle me-2"></i>
+                              Activate
+
+                            {% endif %}
+
+                          </button>
+
+                        </li>
+
+
+                        <li>
+                          <hr class="dropdown-divider">
+                        </li>
+
+
+                        <!-- Delete -->
+
+                        <li>
+
+                          <button
+                            type="button"
+                            class="dropdown-item text-danger delete-blog-category-btn"
+                            data-url="{% url 'admin_delete_blog_category' category.id %}"
+                            data-category-name="{{ category.category_name }}"
+                            data-post-count="{{ category.total_posts|default:0 }}"
+                          >
+                            <i class="bi bi-trash me-2"></i>
+                            Delete Category
+                          </button>
+
+                        </li>
+
+                      </ul>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+
+              {% empty %}
+
+                <tr id="blogCategoryEmptyRow">
+
+                  <td colspan="5">
+
+                    <div class="blog-category-empty-state">
+
+                      <div>
+                        <i class="bi bi-folder-x"></i>
+                      </div>
+
+                      <h4>
+                        No Blog Categories Found
+                      </h4>
+
+                      <p>
+                        Create your first category to organize posts.
+                      </p>
+
+                      <button
+                        type="button"
+                        class="product-submit-btn"
+                        id="emptyAddBlogCategoryBtn"
+                      >
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Add Category
+                      </button>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              {% endfor %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <!-- Search empty state -->
+
+        <div
+          class="blog-category-empty-state d-none"
+          id="blogCategorySearchEmpty"
+        >
+
+          <div>
+            <i class="bi bi-search"></i>
+          </div>
+
+          <h4>
+            No Matching Categories
+          </h4>
+
+          <p>
+            Try another category name or description.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- VIEW BLOG CATEGORY MODAL -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="viewBlogCategoryModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+
+  <div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header blog-category-modal-header">
+
+        <div>
+
+          <span class="blog-modal-label">
+            <i class="bi bi-eye"></i>
+            Category Details
+          </span>
+
+          <h5 class="modal-title">
+            View Blog Category
+          </h5>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+
+      </div>
+
+
+      <div class="modal-body">
+
+        <div class="view-blog-category-card">
+
+          <div class="view-blog-category-icon">
+            <i class="bi bi-folder2-open"></i>
+          </div>
+
+          <div>
+
+            <small>
+              Category Name
+            </small>
+
+            <h3 id="viewBlogCategoryName">
+              Category
+            </h3>
+
+          </div>
+
+        </div>
+
+
+        <div class="view-blog-category-grid">
+
+          <div>
+
+            <small>
+              Status
+            </small>
+
+            <strong id="viewBlogCategoryStatus">
+              Active
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <small>
+              Total Posts
+            </small>
+
+            <strong id="viewBlogCategoryPosts">
+              0
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <div class="view-blog-category-description">
+
+          <small>
+            Description
+          </small>
+
+          <p id="viewBlogCategoryDescription">
+            No description added.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-footer">
+
+        <button
+          type="button"
+          class="btn btn-light"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- ADD / EDIT BLOG CATEGORY MODAL -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="blogCategoryModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+
+  <div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header blog-category-modal-header">
+
+        <div>
+
+          <span class="blog-modal-label">
+            <i class="bi bi-folder-plus"></i>
+            Blog Category
+          </span>
+
+          <h5
+            class="modal-title"
+            id="blogCategoryModalTitle"
+          >
+            Add Blog Category
+          </h5>
+
+          <p class="mb-0">
+            Organize your Velora blog posts.
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+
+      </div>
+
+
+      <form
+        method="POST"
+        action="{% url 'admin_save_blog_category' %}"
+        id="blogCategoryForm"
+        class="ajax-form"
+      >
+        {% csrf_token %}
+
+        <input
+          type="hidden"
+          name="category_id"
+          id="blogCategoryId"
+          value=""
+        >
+
+
+        <div class="modal-body">
+
+          <div
+            class="alert alert-danger d-none ajax-form-errors"
+            id="blogCategoryFormErrors"
+          ></div>
+
+
+          <div class="mb-3">
+
+            <label
+              for="{{ category_form.category_name.id_for_label }}"
+              class="form-label fw-semibold"
+            >
+              Category Name
+            </label>
+
+            {{ category_form.category_name }}
+
+          </div>
+
+
+          <div class="mb-3">
+
+            <label
+              for="{{ category_form.description.id_for_label }}"
+              class="form-label fw-semibold"
+            >
+              Description
+            </label>
+
+            {{ category_form.description }}
+
+          </div>
+
+
+          <label class="permission-card-option">
+
+            {{ category_form.is_active }}
+
+            <span class="permission-card-icon">
+              <i class="bi bi-check-circle"></i>
+            </span>
+
+            <span class="permission-card-text">
+
+              <h6>
+                Active Category
+              </h6>
+
+              <small>
+                Show this category on the public blog page.
+              </small>
+
+            </span>
+
+            <span class="permission-card-check">
+              <i class="bi bi-check-lg"></i>
+            </span>
+
+          </label>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+          <button
+            type="button"
+            class="btn btn-light"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="submit"
+            class="product-submit-btn"
+          >
+            <i class="bi bi-check-circle me-2"></i>
+
+            <span id="blogCategorySaveText">
+              Save Category
+            </span>
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ================================================= -->
+<!-- VIEW BLOG POST MODAL -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="viewBlogPostModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header blog-category-modal-header">
+
+        <div>
+          <span class="blog-modal-label">
+            <i class="bi bi-journal-richtext"></i>
+            Blog Preview
+          </span>
+
+          <h5 class="modal-title">
+            View Blog Post
+          </h5>
+        </div>
+
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+
+      </div>
+
+      <div class="modal-body">
+
+        <div class="row g-4">
+
+          <div class="col-lg-5">
+
+            <div class="blog-view-image-box">
+
+              <img
+                src=""
+                alt="Blog image"
+                id="viewBlogPostImage"
+                class="img-fluid rounded-4 d-none"
+              >
+
+              <div
+                class="blog-view-image-placeholder"
+                id="viewBlogImagePlaceholder"
+              >
+                <i class="bi bi-image"></i>
+                <span>No featured image</span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="col-lg-7">
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+
+              <span
+                class="role-pill gray"
+                id="viewBlogPostCategory"
+              >
+                Uncategorized
+              </span>
+
+              <span
+                class="status active"
+                id="viewBlogPostStatus"
+              >
+                Published
+              </span>
+
+              <span
+                class="badge bg-warning text-dark d-none"
+                id="viewBlogPostFeatured"
+              >
+                Featured
+              </span>
+
+            </div>
+
+            <h2
+              class="fw-bold mb-3"
+              id="viewBlogPostTitle"
+            >
+              Blog title
+            </h2>
+
+            <p
+              class="text-muted fs-5"
+              id="viewBlogPostDescription"
+            >
+              Blog short description
+            </p>
+
+            <div class="row g-3 mt-2">
+
+              <div class="col-md-4">
+                <div class="blog-view-meta-card">
+                  <small>Author</small>
+                  <strong id="viewBlogPostAuthor">
+                    Velora Team
+                  </strong>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="blog-view-meta-card">
+                  <small>Published</small>
+                  <strong id="viewBlogPostPublished">
+                    Not published
+                  </strong>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="blog-view-meta-card">
+                  <small>Views</small>
+                  <strong id="viewBlogPostViews">
+                    0
+                  </strong>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <hr class="my-4">
+
+        <div class="blog-view-content">
+
+          <h5 class="fw-bold mb-3">
+            Full Content
+          </h5>
+
+          <div id="viewBlogPostContent">
+            No content added.
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+
+        <button
+          type="button"
+          class="btn btn-light"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+
+        <a
+          href="#"
+          target="_blank"
+          class="product-submit-btn text-decoration-none d-none"
+          id="viewPublicBlogBtn"
+        >
+          <i class="bi bi-box-arrow-up-right me-2"></i>
+          Open Public Page
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

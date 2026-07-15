@@ -1,98 +1,1371 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+{% load static %}
 
-<div class="container mt-5">
-  <div class="row product-card">
-    <!-- Product Images -->
-    <div class="col-md-5">
-      {% if product.images.first %}
-      <img
-        src="{{ product.images.first.image.url }}"
-        class="product-image mb-3"
-        id="mainImage"
-      />
-      {% endif %}
-    </div>
+{% block content %}
 
-    <!-- Product Details -->
-    <div class="col-md-7">
-      <h2>{{ product.product_name }}</h2>
+<section
+  class="product-details-page"
+  id="productDetailsPage"
+>
+  <div class="container">
 
-      <p class="text-muted">Category : {{ product.category.name }}</p>
+    <!-- ============================================== -->
+    <!-- BREADCRUMB -->
+    <!-- ============================================== -->
 
-      <p class="sku">SKU : {{ product.sku }}</p>
+    <nav class="product-breadcrumb">
 
-      <!-- Price -->
-      <div class="mb-3">
-        {% if product.discount_price %}
-        <span class="price"> ₹{{ product.discount_price }} </span>
+      <a href="{% url 'home_page' %}">
+        Home
+      </a>
 
-        <span class="old-price"> ₹{{ product.price }} </span>
+      <i class="bi bi-chevron-right"></i>
 
-        {% else %}
+      <a href="{% url 'shop_page' %}">
+        Shop
+      </a>
 
-        <span class="price"> ₹{{ product.price }} </span>
+      <i class="bi bi-chevron-right"></i>
 
-        {% endif %}
+      <a
+        href="{% url 'shop_page' %}?category={{ product.category.id }}"
+      >
+        {{ product.category.category_name }}
+      </a>
+
+      <i class="bi bi-chevron-right"></i>
+
+      <span>
+        {{ product.product_name }}
+      </span>
+
+    </nav>
+
+
+    <!-- ============================================== -->
+    <!-- PRODUCT DETAILS CARD -->
+    <!-- ============================================== -->
+
+    <div class="product-details-card surface-card">
+
+      <div class="row g-0">
+
+        <!-- ========================================== -->
+        <!-- PRODUCT GALLERY -->
+        <!-- ========================================== -->
+
+        <div class="col-lg-6">
+
+          <div class="product-gallery">
+
+            <div class="product-main-image">
+
+              {% if product.images.first %}
+
+                <img
+                  src="{{ product.images.first.image.url }}"
+                  alt="{{ product.product_name }}"
+                  id="mainProductImage"
+                >
+
+              {% else %}
+
+                <div class="velora-product-placeholder">
+
+                  <i class="bi bi-image"></i>
+
+                </div>
+
+              {% endif %}
+
+
+              {% if product.has_active_deal %}
+
+                <span class="product-detail-deal-badge">
+
+                  {% if product.discount_percentage %}
+
+                    {{ product.discount_percentage|floatformat:0 }}% OFF
+
+                  {% else %}
+
+                    Special Deal
+
+                  {% endif %}
+
+                </span>
+
+              {% endif %}
+
+
+              {% if product.stock_quantity <= 0 %}
+
+                <span class="velora-product-stock out">
+
+                  Out of Stock
+
+                </span>
+
+              {% elif product.stock_quantity <= 5 %}
+
+                <span class="velora-product-stock low">
+
+                  Only {{ product.stock_quantity }} left
+
+                </span>
+
+              {% endif %}
+
+
+              <button
+                type="button"
+                class="wishlist-btn velora-wishlist-btn"
+                data-url="{% url 'add_to_wishlist' product.id %}"
+                aria-label="Add product to wishlist"
+              >
+
+                {% if is_wishlist %}
+
+                  <i class="bi bi-heart-fill text-danger"></i>
+
+                {% else %}
+
+                  <i class="bi bi-heart"></i>
+
+                {% endif %}
+
+              </button>
+
+            </div>
+
+
+            <!-- Product thumbnails -->
+
+            <div class="product-thumbnails">
+
+              {% for image in product.images.all|slice:":5" %}
+
+                <button
+                  type="button"
+                  class="product-thumbnail {% if forloop.first %}active{% endif %}"
+                  data-image="{{ image.image.url }}"
+                  aria-label="View product image {{ forloop.counter }}"
+                >
+
+                  <img
+                    src="{{ image.image.url }}"
+                    alt="{{ product.product_name }}"
+                  >
+
+                </button>
+
+              {% empty %}
+
+                <button
+                  type="button"
+                  class="product-thumbnail active"
+                  aria-label="Default product image"
+                >
+
+                  <img
+                    src="{% static 'images/default-product.png' %}"
+                    alt="Default product"
+                  >
+
+                </button>
+
+              {% endfor %}
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- PRODUCT INFORMATION -->
+        <!-- ========================================== -->
+
+        <div class="col-lg-6">
+
+          <div class="product-detail-content">
+
+            <a
+              href="{% url 'shop_page' %}?category={{ product.category.id }}"
+              class="velora-product-category"
+            >
+              {{ product.category.category_name }}
+            </a>
+
+
+            <h1>
+              {{ product.product_name }}
+            </h1>
+
+
+            <!-- Product rating near title -->
+
+            <a
+              href="#productReviewSection"
+              class="product-title-rating"
+            >
+
+              <div class="review-static-stars">
+
+                {% for number in "12345" %}
+
+                  {% if forloop.counter <= average_rating %}
+
+                    <i class="bi bi-star-fill"></i>
+
+                  {% else %}
+
+                    <i class="bi bi-star"></i>
+
+                  {% endif %}
+
+                {% endfor %}
+
+              </div>
+
+
+              <strong>
+                {{ average_rating|default:0|floatformat:1 }}
+              </strong>
+
+
+              <span>
+
+                {{ total_reviews|default:0 }}
+
+                review{{ total_reviews|default:0|pluralize }}
+
+              </span>
+
+            </a>
+
+
+            <div class="product-meta-row">
+
+              <span>
+
+                <i class="bi bi-box-seam"></i>
+
+                SKU:
+
+                <strong>
+                  {{ product.sku|default:"Not available" }}
+                </strong>
+
+              </span>
+
+
+              <span>
+
+                {% if product.stock_quantity > 0 %}
+
+                  <i class="bi bi-check-circle"></i>
+
+                  In Stock
+
+                {% else %}
+
+                  <i class="bi bi-x-circle"></i>
+
+                  Out of Stock
+
+                {% endif %}
+
+              </span>
+
+            </div>
+
+
+            <!-- ====================================== -->
+            <!-- PRODUCT PRICE -->
+            <!-- ====================================== -->
+
+            {% if product.has_active_deal %}
+
+              <div class="product-deal-price-area">
+
+                <div class="product-detail-price-row">
+
+                  <span class="product-current-price">
+
+                    ₹{{ product.current_price|floatformat:2 }}
+
+                  </span>
+
+
+                  <span class="product-original-price">
+
+                    ₹{{ product.price|floatformat:2 }}
+
+                  </span>
+
+                </div>
+
+
+                {% if product.get_discount_amount %}
+
+                  <div class="product-saving-message">
+
+                    <i class="bi bi-tag-fill"></i>
+
+                    You save
+
+                    <strong>
+
+                      ₹{{ product.get_discount_amount|floatformat:2 }}
+
+                    </strong>
+
+                  </div>
+
+                {% endif %}
+
+
+                {% with active_deal=product.get_active_deal %}
+
+                  {% if active_deal %}
+
+                    <div
+                      class="product-deal-information"
+                      data-deal-end="{{ active_deal.end_date|date:'c' }}"
+                    >
+
+                      <div>
+
+                        <i class="bi bi-lightning-charge-fill"></i>
+
+                        <span>
+                          {{ active_deal.title }}
+                        </span>
+
+                      </div>
+
+
+                      <div class="product-deal-expiry">
+
+                        <i class="bi bi-clock"></i>
+
+                        Ends
+
+                        <strong>
+
+                          {{ active_deal.end_date|date:"d M Y, h:i A" }}
+
+                        </strong>
+
+                      </div>
+
+                    </div>
+
+                  {% endif %}
+
+                {% endwith %}
+
+              </div>
+
+            {% else %}
+
+              <div class="product-detail-price">
+
+                ₹{{ product.price|floatformat:2 }}
+
+              </div>
+
+            {% endif %}
+
+
+            {% if product.short_description %}
+
+              <p class="product-short-description">
+
+                {{ product.short_description }}
+
+              </p>
+
+            {% endif %}
+
+
+            <hr>
+
+
+            <h4 class="section-title">
+              Product Description
+            </h4>
+
+
+            <p class="product-description">
+
+              {{ product.long_description|default:"No description available."|linebreaksbr }}
+
+            </p>
+
+
+            <!-- ====================================== -->
+            <!-- FEATURES -->
+            <!-- ====================================== -->
+
+            <div class="product-feature-grid">
+
+              <div class="info-box">
+
+                <i class="bi bi-truck"></i>
+
+                <div>
+
+                  <strong>
+                    Fast Delivery
+                  </strong>
+
+                  <span>
+                    Quick delivery service
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div class="info-box">
+
+                <i class="bi bi-shield-check"></i>
+
+                <div>
+
+                  <strong>
+                    Secure Checkout
+                  </strong>
+
+                  <span>
+                    Safe payment process
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div class="info-box">
+
+                <i class="bi bi-arrow-repeat"></i>
+
+                <div>
+
+                  <strong>
+                    Easy Returns
+                  </strong>
+
+                  <span>
+                    Simple return process
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <!-- ====================================== -->
+            <!-- PURCHASE ACTIONS -->
+            <!-- ====================================== -->
+
+            {% if product.stock_quantity > 0 %}
+
+              <div class="product-purchase-row">
+
+                <div class="cart-qty-box product-quantity">
+
+                  <button
+                    type="button"
+                    class="quantity-control"
+                    data-action="minus"
+                    aria-label="Decrease quantity"
+                  >
+                    <i class="bi bi-dash"></i>
+                  </button>
+
+
+                  <input
+                    type="text"
+                    value="1"
+                    id="productQuantity"
+                    data-max="{{ product.stock_quantity }}"
+                    readonly
+                    aria-label="Product quantity"
+                  >
+
+
+                  <button
+                    type="button"
+                    class="quantity-control"
+                    data-action="plus"
+                    aria-label="Increase quantity"
+                  >
+                    <i class="bi bi-plus"></i>
+                  </button>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  class="add-cart-btn product-add-cart-btn"
+                  data-url="{% url 'add_to_cart' product.id %}"
+                  data-quantity-input="#productQuantity"
+                >
+                  <i class="bi bi-cart-plus"></i>
+
+                  Add To Cart
+                </button>
+
+              </div>
+
+
+             {% if user.is_authenticated %}
+
+<a href="{% url 'cart' %}">
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+                <i class="bi bi-lightning-charge"></i>
+
+                Go To Cart
+              </a>
+
+            {% else %}
+
+              <button
+                type="button"
+                class="product-out-button"
+                disabled
+              >
+                <i class="bi bi-x-circle"></i>
+
+                Currently Unavailable
+              </button>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
       </div>
 
-      <!-- Stock -->
-      <p class="stock">Stock : {{ product.stock_quantity }}</p>
-
-      <!-- Short Description -->
-
-      <!-- Long Description -->
-      <h5>Description</h5>
-
-      <p>{{ product.long_description }}</p>
-
-      <!-- Buttons -->
-      <div class="mt-4">
-        {% csrf_token %}
-       <a href="{% url 'add_to_cart' product.id %}"
-   class="btn btn-dark w-100 rounded-pill">
-    <i class="bi bi-cart-plus me-2"></i>
-    Add To Cart
-</a>
-
-        <button class="btn btn-success btn-lg">Buy Now</button>
-      </div>
     </div>
+
+
+    <!-- ============================================== -->
+    <!-- PRODUCT REVIEWS AND RATINGS -->
+    <!-- ============================================== -->
+
+    <section
+      class="product-review-section"
+      id="productReviewSection"
+      data-product-id="{{ product.id }}"
+    >
+
+      <div class="product-review-heading">
+
+        <div>
+
+          <span>
+            Customer Feedback
+          </span>
+
+          <h2>
+            Ratings & Reviews
+          </h2>
+
+          <p>
+            Read feedback from Velora customers and share your
+            experience with this product.
+          </p>
+
+        </div>
+
+
+        <div class="product-review-heading-rating">
+
+          <strong id="productAverageRating">
+
+            {{ average_rating|default:0|floatformat:1 }}
+
+          </strong>
+
+
+          <div>
+
+            <div
+              class="review-static-stars"
+              id="productAverageStars"
+            >
+
+              {% for number in "12345" %}
+
+                {% if forloop.counter <= average_rating %}
+
+                  <i class="bi bi-star-fill"></i>
+
+                {% else %}
+
+                  <i class="bi bi-star"></i>
+
+                {% endif %}
+
+              {% endfor %}
+
+            </div>
+
+
+            <span>
+
+              Based on
+
+              <strong id="productTotalReviews">
+
+                {{ total_reviews|default:0 }}
+
+              </strong>
+
+              review{{ total_reviews|default:0|pluralize }}
+
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="row g-4">
+
+        <!-- ========================================== -->
+        <!-- RATING SUMMARY -->
+        <!-- ========================================== -->
+
+        <div class="col-lg-4">
+
+          <div class="product-rating-summary-card">
+
+            <div class="rating-summary-score">
+
+              <strong id="ratingSummaryAverage">
+
+                {{ average_rating|default:0|floatformat:1 }}
+
+              </strong>
+
+
+              <div>
+
+                <div class="review-static-stars">
+
+                  {% for number in "12345" %}
+
+                    {% if forloop.counter <= average_rating %}
+
+                      <i class="bi bi-star-fill"></i>
+
+                    {% else %}
+
+                      <i class="bi bi-star"></i>
+
+                    {% endif %}
+
+                  {% endfor %}
+
+                </div>
+
+
+                <span>
+
+                  Based on
+
+                  <strong id="ratingSummaryCount">
+
+                    {{ total_reviews|default:0 }}
+
+                  </strong>
+
+                  reviews
+
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div class="rating-distribution-list">
+
+              <div class="rating-distribution-item">
+
+                <span>
+                  5 <i class="bi bi-star-fill"></i>
+                </span>
+
+                <div class="rating-distribution-track">
+
+                  <div
+                    class="rating-distribution-fill"
+                    data-rating-bar="5"
+                    style="width: {{ rating_percentages.5|default:0 }}%;"
+                  ></div>
+
+                </div>
+
+                <strong data-rating-count="5">
+                  {{ rating_counts.5|default:0 }}
+                </strong>
+
+              </div>
+
+
+              <div class="rating-distribution-item">
+
+                <span>
+                  4 <i class="bi bi-star-fill"></i>
+                </span>
+
+                <div class="rating-distribution-track">
+
+                  <div
+                    class="rating-distribution-fill"
+                    data-rating-bar="4"
+                    style="width: {{ rating_percentages.4|default:0 }}%;"
+                  ></div>
+
+                </div>
+
+                <strong data-rating-count="4">
+                  {{ rating_counts.4|default:0 }}
+                </strong>
+
+              </div>
+
+
+              <div class="rating-distribution-item">
+
+                <span>
+                  3 <i class="bi bi-star-fill"></i>
+                </span>
+
+                <div class="rating-distribution-track">
+
+                  <div
+                    class="rating-distribution-fill"
+                    data-rating-bar="3"
+                    style="width: {{ rating_percentages.3|default:0 }}%;"
+                  ></div>
+
+                </div>
+
+                <strong data-rating-count="3">
+                  {{ rating_counts.3|default:0 }}
+                </strong>
+
+              </div>
+
+
+              <div class="rating-distribution-item">
+
+                <span>
+                  2 <i class="bi bi-star-fill"></i>
+                </span>
+
+                <div class="rating-distribution-track">
+
+                  <div
+                    class="rating-distribution-fill"
+                    data-rating-bar="2"
+                    style="width: {{ rating_percentages.2|default:0 }}%;"
+                  ></div>
+
+                </div>
+
+                <strong data-rating-count="2">
+                  {{ rating_counts.2|default:0 }}
+                </strong>
+
+              </div>
+
+
+              <div class="rating-distribution-item">
+
+                <span>
+                  1 <i class="bi bi-star-fill"></i>
+                </span>
+
+                <div class="rating-distribution-track">
+
+                  <div
+                    class="rating-distribution-fill"
+                    data-rating-bar="1"
+                    style="width: {{ rating_percentages.1|default:0 }}%;"
+                  ></div>
+
+                </div>
+
+                <strong data-rating-count="1">
+                  {{ rating_counts.1|default:0 }}
+                </strong>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- REVIEW FORM -->
+        <!-- ========================================== -->
+
+        <div class="col-lg-8">
+
+          <div class="product-review-form-card">
+
+            {% if request.user.is_authenticated %}
+
+              {% if can_review %}
+
+                <div class="review-form-heading">
+
+                  <div>
+
+                    <span>
+
+                      {% if user_review %}
+
+                        Update Your Review
+
+                      {% else %}
+
+                        Share Your Experience
+
+                      {% endif %}
+
+                    </span>
+
+
+                    <h3>
+
+                      {% if user_review %}
+
+                        Edit Your Product Review
+
+                      {% else %}
+
+                        Write A Product Review
+
+                      {% endif %}
+
+                    </h3>
+
+                  </div>
+
+
+                  {% if verified_purchase %}
+
+                    <span class="verified-review-badge">
+
+                      <i class="bi bi-patch-check-fill"></i>
+
+                      Verified Purchase
+
+                    </span>
+
+                  {% endif %}
+
+                </div>
+
+
+                <form
+                  method="POST"
+                  action="{% url 'save_product_review' product.id %}"
+                  id="productReviewForm"
+                >
+                  {% csrf_token %}
+
+
+                  <div class="mb-3">
+
+                    <label class="form-label">
+                      Your Rating
+                    </label>
+
+
+                    <div
+                      class="interactive-review-stars"
+                      id="interactiveReviewStars"
+                    >
+
+                      {% for number in "12345" %}
+
+                        <button
+                          type="button"
+                          class="review-star-button {% if user_review and forloop.counter <= user_review.rating %}active{% endif %}"
+                          data-rating="{{ forloop.counter }}"
+                          aria-label="{{ forloop.counter }} star rating"
+                        >
+                          <i class="bi bi-star-fill"></i>
+                        </button>
+
+                      {% endfor %}
+
+                    </div>
+
+
+                    {{ review_form.rating }}
+
+
+                    <div
+                      class="review-field-error"
+                      data-review-error="rating"
+                    ></div>
+
+                  </div>
+
+
+                  <div class="mb-3">
+
+                    <label
+                      class="form-label"
+                      for="{{ review_form.title.id_for_label }}"
+                    >
+                      Review Title
+                    </label>
+
+                    {{ review_form.title }}
+
+                    <div
+                      class="review-field-error"
+                      data-review-error="title"
+                    ></div>
+
+                  </div>
+
+
+                  <div class="mb-3">
+
+                    <label
+                      class="form-label"
+                      for="{{ review_form.comment.id_for_label }}"
+                    >
+                      Your Review
+                    </label>
+
+                    {{ review_form.comment }}
+
+                    <div
+                      class="review-field-error"
+                      data-review-error="comment"
+                    ></div>
+
+                  </div>
+
+
+                  <div class="product-review-form-footer">
+
+                    <p>
+
+                      <i class="bi bi-info-circle"></i>
+
+                      Your review helps other customers make
+                      better purchasing decisions.
+
+                    </p>
+
+
+                    <div class="d-flex gap-2 flex-wrap">
+
+                      {% if user_review %}
+
+                        <button
+                          type="button"
+                          class="review-delete-own-btn"
+                          id="deleteOwnReviewBtn"
+                          data-url="{% url 'delete_product_review' user_review.id %}"
+                        >
+                          <i class="bi bi-trash"></i>
+
+                          Delete
+                        </button>
+
+                      {% endif %}
+
+
+                      <button
+                        type="submit"
+                        class="primary-btn review-submit-btn"
+                        id="reviewSubmitBtn"
+                      >
+
+                        <span class="review-submit-text">
+
+                          <i class="bi bi-send me-2"></i>
+
+                          {% if user_review %}
+
+                            Update Review
+
+                          {% else %}
+
+                            Submit Review
+
+                          {% endif %}
+
+                        </span>
+
+
+                        <span class="review-submit-loading d-none">
+
+                          <span
+                            class="spinner-border spinner-border-sm me-2"
+                          ></span>
+
+                          Saving...
+
+                        </span>
+
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                </form>
+
+              {% else %}
+
+                <div class="review-permission-message">
+
+                  <div>
+                    <i class="bi bi-bag-check"></i>
+                  </div>
+
+                  <h3>
+                    Purchase Required
+                  </h3>
+
+                  <p>
+                    You can submit a rating and review after purchasing
+                    this product.
+                  </p>
+
+                  <a
+                    href="{% url 'shop_page' %}"
+                    class="primary-btn"
+                  >
+                    Continue Shopping
+                  </a>
+
+                </div>
+
+              {% endif %}
+
+            {% else %}
+
+              <div class="review-permission-message">
+
+                <div>
+                  <i class="bi bi-person-lock"></i>
+                </div>
+
+                <h3>
+                  Login To Write A Review
+                </h3>
+
+                <p>
+                  Sign in to your Velora account to rate and review
+                  this product.
+                </p>
+
+                <a
+                  href="{% url 'login_user' %}?next={{ request.path }}"
+                  class="primary-btn"
+                >
+                  Login Now
+                </a>
+
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ============================================== -->
+      <!-- CUSTOMER REVIEW LIST -->
+      <!-- ============================================== -->
+
+      <div class="customer-review-list-card">
+
+        <div class="customer-review-list-heading">
+
+          <div>
+
+            <span>
+              Customer Reviews
+            </span>
+
+            <h3>
+              What People Are Saying
+            </h3>
+
+          </div>
+
+
+          {% if product_reviews %}
+
+            <select
+              id="reviewSortSelect"
+              class="form-select review-sort-select"
+            >
+
+              <option value="newest">
+                Newest First
+              </option>
+
+              <option value="highest">
+                Highest Rating
+              </option>
+
+              <option value="lowest">
+                Lowest Rating
+              </option>
+
+            </select>
+
+          {% endif %}
+
+        </div>
+
+
+        <div
+          class="customer-review-list"
+          id="customerReviewList"
+        >
+
+          {% for review in product_reviews %}
+
+            <article
+              class="customer-review-item"
+              id="review-item-{{ review.id }}"
+              data-review-rating="{{ review.rating }}"
+              data-review-date="{{ review.created_at|date:'U' }}"
+            >
+
+              <div class="customer-review-avatar">
+
+                {% if review.user.profile_image %}
+
+                  <img
+                    src="{{ review.user.profile_image.url }}"
+                    alt="{{ review.user.username }}"
+                  >
+
+                {% else %}
+
+                  <span>
+                    {{ review.user.username|first|upper }}
+                  </span>
+
+                {% endif %}
+
+              </div>
+
+
+              <div class="customer-review-content">
+
+                <div class="customer-review-top">
+
+                  <div>
+
+                    <strong>
+
+                      {% if review.user.get_full_name %}
+
+                        {{ review.user.get_full_name }}
+
+                      {% else %}
+
+                        {{ review.user.username }}
+
+                      {% endif %}
+
+                    </strong>
+
+
+                    <div class="customer-review-meta">
+
+                      <div class="review-static-stars">
+
+                        {% for number in "12345" %}
+
+                          {% if forloop.counter <= review.rating %}
+
+                            <i class="bi bi-star-fill"></i>
+
+                          {% else %}
+
+                            <i class="bi bi-star"></i>
+
+                          {% endif %}
+
+                        {% endfor %}
+
+                      </div>
+
+
+                      <span>
+                        {{ review.created_at|date:"d M Y" }}
+                      </span>
+
+
+                      {% if review.is_verified_purchase %}
+
+                        <span class="verified-review-text">
+
+                          <i class="bi bi-patch-check-fill"></i>
+
+                          Verified Purchase
+
+                        </span>
+
+                      {% endif %}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                {% if review.title %}
+
+                  <h4>
+                    {{ review.title }}
+                  </h4>
+
+                {% endif %}
+
+
+                <p>
+                  {{ review.comment|linebreaksbr }}
+                </p>
+
+              </div>
+
+            </article>
+
+          {% empty %}
+
+            <div
+              class="review-empty-state"
+              id="reviewEmptyState"
+            >
+
+              <div>
+                <i class="bi bi-chat-square-heart"></i>
+              </div>
+
+              <h3>
+                No Reviews Yet
+              </h3>
+
+              <p>
+                Be the first customer to review this Velora product.
+              </p>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ============================================== -->
+    <!-- RELATED PRODUCTS -->
+    <!-- ============================================== -->
+
+    {% if related_products %}
+
+      <section class="related-products-section">
+
+        <div class="velora-section-heading">
+
+          <div>
+
+            <span>
+              You May Also Like
+            </span>
+
+            <h2>
+              Related Products
+            </h2>
+
+            <p>
+              More products from this category.
+            </p>
+
+          </div>
+
+
+          <a
+            href="{% url 'shop_page' %}?category={{ product.category.id }}"
+            class="velora-section-link"
+          >
+            View All
+
+            <i class="bi bi-arrow-right"></i>
+          </a>
+
+        </div>
+
+
+        <div class="row g-4">
+
+          {% for related in related_products %}
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+
+              {% include "components/productCard.html" with card_product=related %}
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      </section>
+
+    {% endif %}
+
   </div>
-</div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const button = document.querySelector(".add_to_cart");
-
-    button.addEventListener("click", function () {
-      const productId = this.dataset.productId;
-
-      const csrfToken = document.querySelector(
-        "[name=csrfmiddlewaretoken]",
-      ).value;
-
-      fetch(`/add_to_cart/${productId}/`, {
-        method: "POST",
-
-        headers: {
-          "X-CSRFToken": csrfToken,
-          "Content-Type": "application/json",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            alert(data.message);
-          } else {
-            alert(data.message);
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-          alert("Something went wrong");
-        });
-    });
-  });
-</script>
+</section>
 
 {% endblock %}

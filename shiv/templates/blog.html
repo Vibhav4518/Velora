@@ -1,111 +1,949 @@
+{% extends "base.html" %}
+{% load static %}
 
- {% extends "base.html" %} 
+{% block content %}
 
- {% block content %}
-
- <!-- ========================= -->
-<!-- Blog Section -->
-<!-- ========================= -->
-
-<section class="blog-section py-5">
+<section
+  class="velora-blog-page"
+  id="blogPage"
+>
   <div class="container">
-    <div class="text-center mb-5">
-      <span class="text-primary fw-semibold"> OUR BLOG </span>
 
-      <h2 class="fw-bold mt-2">Latest News & Articles</h2>
+    <!-- ================================================= -->
+    <!-- BLOG HERO -->
+    <!-- ================================================= -->
 
-      <p class="text-muted">
-        Stay updated with fashion trends, shopping tips, and exclusive insights.
-      </p>
+    <div class="blog-page-header">
+
+      <div class="blog-page-header-content">
+
+        <span class="blog-header-label">
+          <i class="bi bi-journal-richtext"></i>
+          Velora Stories
+        </span>
+
+        <h1>
+          Ideas, Trends & Shopping Inspiration
+        </h1>
+
+        <p>
+          Discover product guides, lifestyle inspiration,
+          shopping advice and stories prepared by the Velora team.
+        </p>
+
+        <a
+          href="#latestBlogPosts"
+          class="blog-header-btn"
+        >
+          Explore Articles
+          <i class="bi bi-arrow-down"></i>
+        </a>
+
+      </div>
+
+      <div class="blog-header-decoration">
+
+        <div class="blog-header-icon">
+          <i class="bi bi-journal-bookmark-fill"></i>
+        </div>
+
+        <div>
+          <strong>Fresh Velora stories</strong>
+
+          <span>
+            Guides, trends and product inspiration
+          </span>
+        </div>
+
+      </div>
+
+      <div class="blog-header-circle circle-one"></div>
+      <div class="blog-header-circle circle-two"></div>
+
     </div>
 
-    <div class="row g-4">
-      <!-- Blog 1 -->
 
-      <div class="col-lg-4 col-md-6">
-        <div class="blog-card">
-          <div class="blog-image">
+    <!-- ================================================= -->
+    <!-- FEATURED BLOG -->
+    <!-- ================================================= -->
+
+    {% if featured_post %}
+
+      <article
+        class="blog-featured-card"
+        data-blog-popup
+        data-details-url="{% url 'public_blog_popup_details' featured_post.slug %}"
+        role="button"
+        tabindex="0"
+        aria-label="Read {{ featured_post.title }}"
+      >
+
+        <div class="blog-featured-image">
+
+          {% if featured_post.image %}
+
             <img
-              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f"
-              class="img-fluid"
-            />
+              src="{{ featured_post.image.url }}"
+              alt="{{ featured_post.title }}"
+            >
 
-            <span class="blog-date"> 15 Jun </span>
-          </div>
+          {% else %}
 
-          <div class="blog-content">
-            <span class="blog-tag"> Fashion </span>
+            <div class="blog-image-placeholder">
+              <i class="bi bi-image"></i>
+            </div>
 
-            <h4>Top Fashion Trends To Follow In 2026</h4>
+          {% endif %}
 
-            <p>
-              Discover the latest styles, colors, and accessories dominating
-              this year's fashion industry.
-            </p>
-
-            <a href="#" class="btn btn-outline-primary"> Read More </a>
-          </div>
         </div>
+
+
+        <div class="blog-featured-content">
+
+          <div class="blog-featured-label-row">
+
+            <span class="blog-featured-label">
+              <i class="bi bi-stars"></i>
+              Featured Story
+            </span>
+
+            {% if featured_post.category %}
+
+              <span class="blog-category-pill">
+                {{ featured_post.category.category_name }}
+              </span>
+
+            {% endif %}
+
+          </div>
+
+
+          <h2>
+            {{ featured_post.title }}
+          </h2>
+
+
+          <p>
+            {{ featured_post.short_description }}
+          </p>
+
+
+          <div class="blog-post-meta">
+
+            <span>
+              <i class="bi bi-person"></i>
+
+              {% if featured_post.author %}
+                {{ featured_post.author.username }}
+              {% else %}
+                Velora Team
+              {% endif %}
+            </span>
+
+
+            <span>
+              <i class="bi bi-calendar3"></i>
+              {{ featured_post.published_at|date:"d M Y" }}
+            </span>
+
+
+            <span>
+              <i class="bi bi-eye"></i>
+              {{ featured_post.views_count|default:0 }} views
+            </span>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="blog-read-more-btn"
+            data-blog-popup
+            data-details-url="{% url 'public_blog_popup_details' featured_post.slug %}"
+          >
+            Read Full Story
+            <i class="bi bi-arrow-right"></i>
+          </button>
+
+        </div>
+
+      </article>
+
+
+    {% else %}
+
+      <div class="blog-empty-hero">
+
+        <div class="blog-empty-hero-icon">
+          <i class="bi bi-journal-plus"></i>
+        </div>
+
+        <div>
+
+          <span>
+            Velora Blog
+          </span>
+
+          <h2>
+            Stories Are Coming Soon
+          </h2>
+
+          <p>
+            Our team is preparing shopping guides,
+            product stories and lifestyle inspiration.
+          </p>
+
+        </div>
+
       </div>
 
-      <!-- Blog 2 -->
+    {% endif %}
 
-      <div class="col-lg-4 col-md-6">
-        <div class="blog-card">
-          <div class="blog-image">
-            <img
-              src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9"
-              class="img-fluid"
-            />
 
-            <span class="blog-date"> 12 Jun </span>
+    <!-- ================================================= -->
+    <!-- BLOG BODY -->
+    <!-- ================================================= -->
+
+    <div
+      class="row g-4"
+      id="latestBlogPosts"
+    >
+
+      <!-- ================================================= -->
+      <!-- BLOG POSTS -->
+      <!-- ================================================= -->
+
+      <div class="col-xl-8">
+
+        <!-- Search and categories -->
+
+        <div class="blog-toolbar">
+
+          <div class="blog-search-box">
+
+            <i class="bi bi-search"></i>
+
+            <input
+              type="search"
+              id="blogSearchInput"
+              placeholder="Search Velora articles..."
+              autocomplete="off"
+            >
+
+            <button
+              type="button"
+              id="clearBlogSearch"
+              class="blog-search-clear d-none"
+              aria-label="Clear search"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+
           </div>
 
-          <div class="blog-content">
-            <span class="blog-tag"> Tech </span>
 
-            <h4>Best Gadgets Worth Buying This Year</h4>
+          <div class="blog-category-filter">
+
+            <button
+              type="button"
+              class="blog-filter-btn active"
+              data-blog-category="all"
+            >
+              All
+            </button>
+
+            {% for category in categories %}
+
+              <button
+                type="button"
+                class="blog-filter-btn"
+                data-blog-category="{{ category.slug }}"
+              >
+                {{ category.category_name }}
+              </button>
+
+            {% endfor %}
+
+          </div>
+
+        </div>
+
+
+        <!-- Heading -->
+
+        <div class="blog-section-heading">
+
+          <div>
+
+            <span>
+              Latest Articles
+            </span>
+
+            <h2>
+              Discover Something New
+            </h2>
 
             <p>
-              Explore premium smart devices designed to enhance productivity and
-              entertainment.
+              Explore the latest content from Velora.
             </p>
 
-            <a href="#" class="btn btn-outline-primary"> Read More </a>
           </div>
+
+
+          <div class="blog-result-count">
+
+            <strong id="visibleBlogCount">
+              {{ posts|length }}
+            </strong>
+
+            <small>
+              Articles
+            </small>
+
+          </div>
+
         </div>
+
+
+        <!-- Dynamic blog grid -->
+
+        <div
+          class="row g-4"
+          id="blogPostGrid"
+        >
+
+          {% for post in posts %}
+
+            <div
+              class="col-md-6 blog-post-column"
+              data-blog-post
+              data-title="{{ post.title|lower }}"
+              data-description="{{ post.short_description|lower }}"
+              data-category="{% if post.category %}{{ post.category.slug }}{% else %}uncategorized{% endif %}"
+            >
+
+              <article
+                class="modern-blog-card"
+                data-blog-popup
+                data-details-url="{% url 'public_blog_popup_details' post.slug %}"
+                role="button"
+                tabindex="0"
+                aria-label="Read {{ post.title }}"
+              >
+
+                <div class="modern-blog-media">
+
+                  {% if post.image %}
+
+                    <img
+                      src="{{ post.image.url }}"
+                      alt="{{ post.title }}"
+                      loading="lazy"
+                    >
+
+                  {% else %}
+
+                    <div class="blog-image-placeholder">
+                      <i class="bi bi-image"></i>
+                    </div>
+
+                  {% endif %}
+
+
+                  {% if post.category %}
+
+                    <span class="modern-blog-category">
+                      {{ post.category.category_name }}
+                    </span>
+
+                  {% endif %}
+
+                </div>
+
+
+                <div class="modern-blog-content">
+
+                  <div class="blog-card-meta">
+
+                    <span>
+                      <i class="bi bi-calendar3"></i>
+                      {{ post.published_at|date:"d M Y" }}
+                    </span>
+
+                    <span>
+                      <i class="bi bi-eye"></i>
+                      {{ post.views_count|default:0 }}
+                    </span>
+
+                  </div>
+
+
+                  <h3>
+                    {{ post.title }}
+                  </h3>
+
+
+                  <p>
+                    {{ post.short_description|truncatechars:125 }}
+                  </p>
+
+
+                  <div class="modern-blog-footer">
+
+                    <div class="blog-author">
+
+                      <span>
+
+                        {% if post.author and post.author.profile_image %}
+
+                          <img
+                            src="{{ post.author.profile_image.url }}"
+                            alt="{{ post.author.username }}"
+                          >
+
+                        {% else %}
+
+                          <i class="bi bi-person"></i>
+
+                        {% endif %}
+
+                      </span>
+
+
+                      <div>
+
+                        <strong>
+
+                          {% if post.author %}
+                            {{ post.author.username }}
+                          {% else %}
+                            Velora Team
+                          {% endif %}
+
+                        </strong>
+
+                        <small>
+                          Author
+                        </small>
+
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      type="button"
+                      class="blog-card-read-btn"
+                      data-blog-popup
+                      data-details-url="{% url 'public_blog_popup_details' post.slug %}"
+                      aria-label="Read {{ post.title }}"
+                    >
+                      <i class="bi bi-arrow-right"></i>
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </article>
+
+            </div>
+
+
+          {% empty %}
+
+            <div class="col-12">
+
+              <div class="blog-empty-state">
+
+                <div>
+                  <i class="bi bi-journal-x"></i>
+                </div>
+
+                <h3>
+                  No Blog Posts Available
+                </h3>
+
+                <p>
+                  New Velora articles will appear here soon.
+                </p>
+
+              </div>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+
+        <!-- Search empty state -->
+
+        <div
+          class="blog-empty-state d-none"
+          id="blogSearchEmpty"
+        >
+
+          <div>
+            <i class="bi bi-search"></i>
+          </div>
+
+          <h3>
+            No Matching Articles
+          </h3>
+
+          <p>
+            Try changing your search text or selected category.
+          </p>
+
+          <button
+            type="button"
+            class="blog-read-more-btn"
+            id="resetBlogFilters"
+          >
+            Reset Filters
+            <i class="bi bi-arrow-counterclockwise"></i>
+          </button>
+
+        </div>
+
       </div>
 
-      <!-- Blog 3 -->
 
-      <div class="col-lg-4 col-md-6">
-        <div class="blog-card">
-          <div class="blog-image">
-            <img
-              src="https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9"
-              class="img-fluid"
-            />
+      <!-- ================================================= -->
+      <!-- DYNAMIC SIDEBAR -->
+      <!-- ================================================= -->
 
-            <span class="blog-date"> 08 Jun </span>
+      <div class="col-xl-4">
+
+        <aside class="blog-sidebar">
+
+          <!-- Categories -->
+
+          <div class="blog-categories-card">
+
+            <div class="sidebar-section-header">
+
+              <div>
+
+                <span>
+                  Browse By
+                </span>
+
+                <h3>
+                  Blog Categories
+                </h3>
+
+              </div>
+
+
+              <div class="sidebar-header-icon">
+                <i class="bi bi-grid"></i>
+              </div>
+
+            </div>
+
+
+            <div class="sidebar-category-list">
+
+              {% for category in categories %}
+
+                <button
+                  type="button"
+                  class="sidebar-category-item"
+                  data-sidebar-blog-category="{{ category.slug }}"
+                >
+
+                  <span>
+                    <i class="bi bi-folder"></i>
+                    {{ category.category_name }}
+                  </span>
+
+                  <strong>
+                    {{ category.posts.count }}
+                  </strong>
+
+                </button>
+
+
+              {% empty %}
+
+                <div class="blog-sidebar-empty">
+
+                  <i class="bi bi-folder-x"></i>
+
+                  <p>
+                    No categories available.
+                  </p>
+
+                </div>
+
+              {% endfor %}
+
+            </div>
+
           </div>
 
-          <div class="blog-content">
-            <span class="blog-tag"> Beauty </span>
 
-            <h4>Essential Beauty Products For Daily Care</h4>
+          <!-- Popular posts -->
+
+          <div class="popular-posts-card">
+
+            <div class="sidebar-section-header">
+
+              <div>
+
+                <span>
+                  Most Read
+                </span>
+
+                <h3>
+                  Popular Stories
+                </h3>
+
+              </div>
+
+
+              <div class="sidebar-header-icon">
+                <i class="bi bi-fire"></i>
+              </div>
+
+            </div>
+
+
+            <div class="popular-post-list">
+
+              {% for post in popular_posts %}
+
+                <button
+                  type="button"
+                  class="popular-post-item"
+                  data-blog-popup
+                  data-details-url="{% url 'public_blog_popup_details' post.slug %}"
+                  aria-label="Read {{ post.title }}"
+                >
+
+                  <span class="popular-post-number">
+                    {{ forloop.counter|stringformat:"02d" }}
+                  </span>
+
+
+                  <div>
+
+                    <h4>
+                      {{ post.title }}
+                    </h4>
+
+                    <small>
+                      <i class="bi bi-eye"></i>
+                      {{ post.views_count|default:0 }} views
+                    </small>
+
+                  </div>
+
+                </button>
+
+
+              {% empty %}
+
+                <div class="blog-sidebar-empty">
+
+                  <i class="bi bi-journal"></i>
+
+                  <p>
+                    Popular posts will appear here.
+                  </p>
+
+                </div>
+
+              {% endfor %}
+
+            </div>
+
+          </div>
+
+
+          <!-- CTA -->
+
+          <div class="blog-sidebar-cta">
+
+            <div class="blog-sidebar-cta-icon">
+              <i class="bi bi-bag-heart"></i>
+            </div>
+
+            <h3>
+              Discover Velora Products
+            </h3>
 
             <p>
-              Build an effective skincare routine using trusted and trending
-              beauty essentials.
+              Explore our latest collections and find products
+              made for your lifestyle.
             </p>
 
-            <a href="#" class="btn btn-outline-primary"> Read More </a>
+            <a
+              href="{% url 'shop_page' %}"
+              class="blog-sidebar-cta-btn"
+            >
+              Shop Now
+              <i class="bi bi-arrow-right"></i>
+            </a>
+
           </div>
-        </div>
+
+        </aside>
+
       </div>
+
     </div>
+
   </div>
+
 </section>
 
 
- {% endblock %}
+<!-- ================================================= -->
+<!-- PUBLIC BLOG DETAILS POPUP -->
+<!-- ================================================= -->
+
+<div
+  class="modal fade"
+  id="publicBlogPopupModal"
+  tabindex="-1"
+  aria-labelledby="publicBlogPopupTitle"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+    <div class="modal-content public-blog-popup">
+
+      <!-- Header -->
+
+      <div class="modal-header public-blog-popup-header">
+
+        <div>
+
+          <span class="public-blog-popup-label">
+            <i class="bi bi-journal-richtext"></i>
+            Velora Story
+          </span>
+
+          <h5
+            class="modal-title"
+            id="publicBlogPopupTitle"
+          >
+            Blog Details
+          </h5>
+
+        </div>
+
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+
+      </div>
+
+
+      <!-- Body -->
+
+      <div class="modal-body">
+
+        <!-- Loading state -->
+
+        <div
+          class="public-blog-popup-loading"
+          id="publicBlogPopupLoading"
+        >
+          <div
+            class="spinner-border"
+            role="status"
+          ></div>
+
+          <p>
+            Loading story...
+          </p>
+        </div>
+
+
+        <!-- Error state -->
+
+        <div
+          class="public-blog-popup-error d-none"
+          id="publicBlogPopupError"
+        >
+          <i class="bi bi-exclamation-circle"></i>
+
+          <h4>
+            Unable to load this story
+          </h4>
+
+          <p>
+            Please try again.
+          </p>
+        </div>
+
+
+        <!-- Content -->
+
+        <div
+          class="public-blog-popup-content d-none"
+          id="publicBlogPopupContent"
+        >
+
+          <div class="public-blog-popup-hero">
+
+            <!-- Image -->
+
+            <div class="public-blog-popup-image">
+
+              <img
+                src=""
+                alt=""
+                id="popupBlogImage"
+                class="d-none"
+              >
+
+              <div
+                class="public-blog-popup-placeholder"
+                id="popupBlogImagePlaceholder"
+              >
+                <i class="bi bi-image"></i>
+              </div>
+
+            </div>
+
+
+            <!-- Summary -->
+
+            <div class="public-blog-popup-summary">
+
+              <div class="public-blog-popup-badges">
+
+                <span
+                  class="popup-blog-featured d-none"
+                  id="popupBlogFeatured"
+                >
+                  <i class="bi bi-stars"></i>
+                  Featured Story
+                </span>
+
+                <span
+                  class="popup-blog-category"
+                  id="popupBlogCategory"
+                >
+                  Category
+                </span>
+
+              </div>
+
+
+              <h1 id="popupBlogTitle">
+                Blog title
+              </h1>
+
+              <p id="popupBlogDescription">
+                Blog description
+              </p>
+
+
+              <div class="public-blog-popup-meta">
+
+                <span>
+                  <i class="bi bi-person"></i>
+
+                  <strong id="popupBlogAuthor">
+                    Velora Team
+                  </strong>
+                </span>
+
+
+                <span>
+                  <i class="bi bi-calendar3"></i>
+
+                  <strong id="popupBlogDate">
+                    Not published
+                  </strong>
+                </span>
+
+
+                <span>
+                  <i class="bi bi-eye"></i>
+
+                  <strong id="popupBlogViews">
+                    0 views
+                  </strong>
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- Full content -->
+
+          <div class="public-blog-full-content">
+
+            <div id="popupBlogContent">
+              Full blog content will appear here.
+            </div>
+
+          </div>
+
+
+          <!-- Related stories -->
+
+          <div
+            class="popup-related-blogs d-none"
+            id="popupRelatedSection"
+          >
+
+            <div class="popup-related-heading">
+
+              <span>
+                Continue Reading
+              </span>
+
+              <h3>
+                Related Stories
+              </h3>
+
+            </div>
+
+            <div
+              class="row g-3"
+              id="popupRelatedBlogs"
+            ></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Footer -->
+
+      <div class="modal-footer">
+
+        <button
+          type="button"
+          class="btn btn-light"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+
+       
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

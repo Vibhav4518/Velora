@@ -1,123 +1,798 @@
+{% extends "base.html" %}
+{% load static %}
 
- {% extends "base.html" %} 
+{% block content %}
 
- {% block content %}
- 
- <!-- ========================= -->
-<!-- Contact Section -->
-<!-- ========================= -->
+<section
+  class="velora-contact-page"
+  id="contactPage"
+>
 
-<section class="contact-section py-5">
   <div class="container">
-    <div class="text-center mb-5">
-      <span class="text-primary fw-semibold"> CONTACT US </span>
 
-      <h2 class="fw-bold mt-2">Get In Touch With Velora</h2>
+    <!-- ================================================= -->
+    <!-- CONTACT HERO -->
+    <!-- ================================================= -->
 
-      <p class="text-muted">
-        We'd love to hear from you. Reach out with questions, feedback, or
-        partnership inquiries.
-      </p>
+    <div class="contact-page-header">
+
+      <div class="contact-header-content">
+
+        <span class="contact-header-label">
+
+          <i class="bi bi-chat-heart"></i>
+
+          Contact Velora
+
+        </span>
+
+
+        <h1>
+          We’re Here To Help
+        </h1>
+
+
+        <p>
+          Have a question about your order, product, payment or
+          delivery? Send us a message and the Velora support team
+          will get back to you.
+        </p>
+
+
+        <div class="contact-header-pills">
+
+          <span>
+
+            <i class="bi bi-check-circle-fill"></i>
+
+            Fast response
+
+          </span>
+
+
+          <span>
+
+            <i class="bi bi-shield-check"></i>
+
+            Secure support
+
+          </span>
+
+
+          <span>
+
+            <i class="bi bi-heart-fill"></i>
+
+            Customer focused
+
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="contact-header-visual">
+
+        <div class="contact-header-icon">
+
+          <i class="bi bi-headset"></i>
+
+        </div>
+
+
+        <div>
+
+          <strong>
+            Need assistance?
+          </strong>
+
+          <span>
+            Our support team is ready to help.
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="contact-header-circle circle-one"></div>
+      <div class="contact-header-circle circle-two"></div>
+
     </div>
+
+
+    <!-- ================================================= -->
+    <!-- CONTACT INFORMATION AND FORM -->
+    <!-- ================================================= -->
 
     <div class="row g-4">
-      <!-- Contact Info -->
+
+      <!-- Contact details -->
 
       <div class="col-lg-4">
-        <div class="contact-card">
-          <i class="bi bi-geo-alt-fill"></i>
 
-          <h5>Address</h5>
+        <div class="contact-information-card">
 
-          <p>
-            123 Velora Street<br />
-            New Delhi, India
-          </p>
+          <div class="contact-card-heading">
+
+            <span>
+              Contact Information
+            </span>
+
+            <h2>
+              Let’s Connect
+            </h2>
+
+            <p>
+              Choose the most convenient way to reach Velora.
+            </p>
+
+          </div>
+
+
+          <div class="contact-info-list">
+
+            <!-- Address -->
+
+            <div class="contact-info-item">
+
+              <div class="contact-info-icon">
+
+                <i class="bi bi-geo-alt"></i>
+
+              </div>
+
+
+              <div>
+
+                <small>
+                  Our Address
+                </small>
+
+                <strong>
+                  123 Velora Street
+                </strong>
+
+                <span>
+                  New Delhi, India
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <!-- Phone -->
+
+            <div class="contact-info-item">
+
+              <div class="contact-info-icon">
+
+                <i class="bi bi-telephone"></i>
+
+              </div>
+
+
+              <div>
+
+                <small>
+                  Call Us
+                </small>
+
+                <a href="tel:+919876543210">
+                  +91 98765 43210
+                </a>
+
+                <span>
+                  Monday to Saturday
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <!-- Email -->
+
+            <div class="contact-info-item">
+
+              <div class="contact-info-icon">
+
+                <i class="bi bi-envelope"></i>
+
+              </div>
+
+
+              <div>
+
+                <small>
+                  Email Support
+                </small>
+
+                <a href="mailto:support@velora.com">
+                  support@velora.com
+                </a>
+
+                <span>
+                  Replies within 24 hours
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <!-- Working hours -->
+
+            <div class="contact-info-item">
+
+              <div class="contact-info-icon">
+
+                <i class="bi bi-clock"></i>
+
+              </div>
+
+
+              <div>
+
+                <small>
+                  Support Hours
+                </small>
+
+                <strong>
+                  9:00 AM – 7:00 PM
+                </strong>
+
+                <span>
+                  Sunday support limited
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- Social links -->
+
+          <div class="contact-social-box">
+
+            <small>
+              Follow Velora
+            </small>
+
+
+            <div class="contact-social-links">
+
+              <a
+                href="#"
+                aria-label="Facebook"
+              >
+                <i class="bi bi-facebook"></i>
+              </a>
+
+
+              <a
+                href="#"
+                aria-label="Instagram"
+              >
+                <i class="bi bi-instagram"></i>
+              </a>
+
+
+              <a
+                href="#"
+                aria-label="Twitter"
+              >
+                <i class="bi bi-twitter-x"></i>
+              </a>
+
+
+              <a
+                href="#"
+                aria-label="LinkedIn"
+              >
+                <i class="bi bi-linkedin"></i>
+              </a>
+
+            </div>
+
+          </div>
+
         </div>
 
-        <div class="contact-card mt-4">
-          <i class="bi bi-envelope-fill"></i>
-
-          <h5>Email</h5>
-
-          <p>support@velora.com</p>
-        </div>
-
-        <div class="contact-card mt-4">
-          <i class="bi bi-telephone-fill"></i>
-
-          <h5>Phone</h5>
-
-          <p>+91 98765 43210</p>
-        </div>
       </div>
 
-      <!-- Contact Form -->
+
+      <!-- Contact form -->
 
       <div class="col-lg-8">
-        <div class="contact-form">
-          <form>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Your Name"
-                  required
-                />
-              </div>
 
-              <div class="col-md-6 mb-3">
-                <input
-                  type="email"
-                  class="form-control"
-                  placeholder="Your Email"
-                  required
-                />
-              </div>
+        <div class="contact-form-card">
+
+          <div class="contact-form-heading">
+
+            <div>
+
+              <span>
+                Send A Message
+              </span>
+
+              <h2>
+                How Can We Help?
+              </h2>
+
+              <p>
+                Fill in the form and our support team will
+                contact you shortly.
+              </p>
+
             </div>
 
-            <div class="mb-3">
-              <input
-                type="text"
-                class="form-control"
-                placeholder="Subject"
-                required
-              />
+
+            <div class="contact-form-heading-icon">
+
+              <i class="bi bi-send"></i>
+
             </div>
 
-            <div class="mb-3">
-              <textarea
-                rows="6"
-                class="form-control"
-                placeholder="Write your message..."
-                required
+          </div>
+
+
+          <form
+            method="POST"
+            action="{% url 'contact_page' %}"
+            id="contactForm"
+            novalidate
+          >
+            {% csrf_token %}
+
+
+            <div class="row g-3">
+
+              <div class="col-md-6">
+
+                <label
+                  class="form-label"
+                  for="{{ contact_form.name.id_for_label }}"
+                >
+                  Full Name
+                </label>
+
+                {{ contact_form.name }}
+
+                <div
+                  class="contact-field-error"
+                  data-error-for="name"
+                ></div>
+
+              </div>
+
+
+              <div class="col-md-6">
+
+                <label
+                  class="form-label"
+                  for="{{ contact_form.email.id_for_label }}"
+                >
+                  Email Address
+                </label>
+
+                {{ contact_form.email }}
+
+                <div
+                  class="contact-field-error"
+                  data-error-for="email"
+                ></div>
+
+              </div>
+
+
+              <div class="col-md-6">
+
+                <label
+                  class="form-label"
+                  for="{{ contact_form.phone.id_for_label }}"
+                >
+                  Phone Number
+                </label>
+
+                {{ contact_form.phone }}
+
+                <div
+                  class="contact-field-error"
+                  data-error-for="phone"
+                ></div>
+
+              </div>
+
+
+              <div class="col-md-6">
+
+                <label
+                  class="form-label"
+                  for="{{ contact_form.subject.id_for_label }}"
+                >
+                  Subject
+                </label>
+
+                {{ contact_form.subject }}
+
+                <div
+                  class="contact-field-error"
+                  data-error-for="subject"
+                ></div>
+
+              </div>
+
+
+              <div class="col-12">
+
+                <label
+                  class="form-label"
+                  for="{{ contact_form.message.id_for_label }}"
+                >
+                  Your Message
+                </label>
+
+                {{ contact_form.message }}
+
+                <div
+                  class="contact-field-error"
+                  data-error-for="message"
+                ></div>
+
+              </div>
+
+            </div>
+
+
+            <div class="contact-form-footer">
+
+              <div class="contact-privacy-note">
+
+                <i class="bi bi-shield-lock"></i>
+
+                <span>
+                  Your details are safe and will only be used
+                  to respond to your message.
+                </span>
+
+              </div>
+
+
+              <button
+                type="submit"
+                class="primary-btn contact-submit-btn"
+                id="contactSubmitBtn"
               >
-              </textarea>
+
+                <span class="contact-submit-text">
+
+                  <i class="bi bi-send me-2"></i>
+
+                  Send Message
+
+                </span>
+
+
+                <span class="contact-submit-loading d-none">
+
+                  <span
+                    class="spinner-border spinner-border-sm me-2"
+                  ></span>
+
+                  Sending...
+
+                </span>
+
+              </button>
+
             </div>
 
-            <button class="btn btn-primary">Send Message</button>
           </form>
+
         </div>
+
       </div>
+
     </div>
 
-    <!-- Map -->
 
-    <div class="mt-5">
-      <iframe
-        src="https://maps.google.com/maps?q=New%20Delhi&t=&z=13&ie=UTF8&iwloc=&output=embed"
-        width="100%"
-        height="400"
-        style="border: 0"
-        loading="lazy"
+    <!-- ================================================= -->
+    <!-- QUICK SUPPORT CARDS -->
+    <!-- ================================================= -->
+
+    <div class="contact-support-grid">
+
+     
+
+{% if user.is_authenticated %}
+
+ <a
+        href="{% url 'my_orders' %}"
+        class="contact-support-card"
       >
-      </iframe>
+
+        <span>
+
+          <i class="bi bi-box-seam"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Track Your Order
+          </strong>
+
+          <small>
+            Check delivery and order status
+          </small>
+
+        </div>
+
+
+        <i class="bi bi-arrow-right"></i>
+
+      </a>
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}      
+
+
+      
+
+
+      
+      {% if user.is_authenticated %}
+
+<a href="{% url 'my_profile' %}"  class="contact-support-card">
+
+  <span>
+
+          <i class="bi bi-person-circle"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Manage Your Account
+          </strong>
+
+          <small>
+            Update profile and addresses
+          </small>
+
+        </div>
+
+
+        <i class="bi bi-arrow-right"></i>
+
+      </a>
+
+{% else %}
+
+<a href="#" onclick="return requireLogin('{% url 'login_user' %}')">
+
+  
+
+{% endif %}
+
+        
+
+
+      <a
+        href="{% url 'shop_page' %}"
+        class="contact-support-card"
+      >
+
+        <span>
+
+          <i class="bi bi-bag-heart"></i>
+
+        </span>
+
+
+        <div>
+
+          <strong>
+            Browse Products
+          </strong>
+
+          <small>
+            Explore the latest Velora collection
+          </small>
+
+        </div>
+
+
+        <i class="bi bi-arrow-right"></i>
+
+      </a>
+
     </div>
+
+
+    <!-- ================================================= -->
+    <!-- FAQ SECTION -->
+    <!-- ================================================= -->
+
+    <div class="contact-faq-section">
+
+      <div class="contact-section-heading">
+
+        <span>
+          Frequently Asked Questions
+        </span>
+
+        <h2>
+          Quick Answers
+        </h2>
+
+        <p>
+          Find answers to common questions before contacting support.
+        </p>
+
+      </div>
+
+
+      <div
+        class="accordion contact-faq-accordion"
+        id="contactFaqAccordion"
+      >
+
+        <div class="accordion-item">
+
+          <h2 class="accordion-header">
+
+            <button
+              class="accordion-button"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#contactFaqOne"
+            >
+              How can I track my order?
+            </button>
+
+          </h2>
+
+
+          <div
+            id="contactFaqOne"
+            class="accordion-collapse collapse show"
+            data-bs-parent="#contactFaqAccordion"
+          >
+
+            <div class="accordion-body">
+
+              Log in to your Velora account and open
+              <strong>My Orders</strong>. Select an order to
+              view its current delivery status.
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="accordion-item">
+
+          <h2 class="accordion-header">
+
+            <button
+              class="accordion-button collapsed"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#contactFaqTwo"
+            >
+              How do I cancel an order?
+            </button>
+
+          </h2>
+
+
+          <div
+            id="contactFaqTwo"
+            class="accordion-collapse collapse"
+            data-bs-parent="#contactFaqAccordion"
+          >
+
+            <div class="accordion-body">
+
+              Orders can be cancelled from the My Orders page
+              before they are delivered or already cancelled.
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="accordion-item">
+
+          <h2 class="accordion-header">
+
+            <button
+              class="accordion-button collapsed"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#contactFaqThree"
+            >
+              When will I receive a response?
+            </button>
+
+          </h2>
+
+
+          <div
+            id="contactFaqThree"
+            class="accordion-collapse collapse"
+            data-bs-parent="#contactFaqAccordion"
+          >
+
+            <div class="accordion-body">
+
+              The Velora support team normally responds within
+              24 working hours.
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="accordion-item">
+
+          <h2 class="accordion-header">
+
+            <button
+              class="accordion-button collapsed"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#contactFaqFour"
+            >
+              Are my contact details secure?
+            </button>
+
+          </h2>
+
+
+          <div
+            id="contactFaqFour"
+            class="accordion-collapse collapse"
+            data-bs-parent="#contactFaqAccordion"
+          >
+
+            <div class="accordion-body">
+
+              Yes. Your details are stored securely and used only
+              to handle your support request.
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
+
 </section>
 
-
-
-
- {% endblock %}
+{% endblock %}

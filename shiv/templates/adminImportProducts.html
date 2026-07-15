@@ -1,0 +1,130 @@
+{% extends "adminLayout.html" %}
+{% load static %}
+
+{% block admincontent %}
+
+<div class="container-fluid p-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold mb-1">Bulk Import Products</h3>
+      <p class="text-muted mb-0">Upload Excel file and import products quickly.</p>
+    </div>
+
+    <a href="{% url 'admin_products' %}" class="btn btn-outline-primary rounded-pill px-4">
+      <i class="bi bi-arrow-left"></i> Back to Products
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label class="form-label fw-semibold">Upload Excel File</label>
+        <input type="file" name="excel_file" accept=".xlsx" class="form-control mb-3" required>
+
+        <button class="btn btn-primary rounded-pill px-4">
+          <i class="bi bi-upload"></i> Import Products
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <h5 class="fw-bold">Required Excel Format</h5>
+
+      <div class="table-responsive">
+        <table class="table table-bordered mt-3">
+          <thead class="table-light">
+            <tr>
+              <th>Category</th>
+              <th>Product Name</th>
+              <th>Price</th>
+              <th>Offer Price</th>
+              <th>Stock</th>
+              <th>Short Description</th>
+              <th>Description</th>
+              <th>Image1</th>
+              <th>Image2</th>
+              <th>Image3</th>
+              <th>Image4</th>
+              <th>Image5</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+
+      <p class="text-muted mb-0">
+        Put all image files inside <b>media/products/</b> and write only image names like <b>shoe1_1.jpg</b>.
+      </p>
+    </div>
+  </div>
+
+  {% if report %}
+  <div class="row g-4">
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <p class="text-muted mb-1">Created Products</p>
+          <h3 class="fw-bold text-success">{{ report.created }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <p class="text-muted mb-1">Skipped Duplicates</p>
+          <h3 class="fw-bold text-warning">{{ report.skipped }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body">
+          <p class="text-muted mb-1">Missing Images</p>
+          <h3 class="fw-bold text-danger">{{ report.missing_images|length }}</h3>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {% if report.missing_images %}
+  <div class="card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card-body p-4">
+      <h5 class="fw-bold text-danger">Missing Images</h5>
+
+      <ul class="mb-0">
+        {% for img in report.missing_images %}
+          <li>{{ img }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if report.errors %}
+  <div class="card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card-body p-4">
+      <h5 class="fw-bold text-danger">Errors</h5>
+
+      <ul class="mb-0">
+        {% for error in report.errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+</div>
+
+{% endblock %}

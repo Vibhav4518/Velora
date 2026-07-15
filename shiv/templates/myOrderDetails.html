@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="order-detail-page">
+
+  <div class="container">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="order-detail-header">
+
+      <div>
+
+       
+
+{% if user.is_authenticated %}
+
+ <a
+          href="{% url 'my_orders' %}"
+          class="order-back-link"
+        >
+
+{% else %}
+
+<a href="#"
+   onclick="return requireLogin('{% url 'login_user' %}')">
+
+{% endif %}
+
+          <i class="bi bi-arrow-left"></i>
+          Back To Orders
+        </a>
+
+        <span class="order-detail-label">
+          <i class="bi bi-box-seam"></i>
+          Order Details
+        </span>
+
+        <h1>
+          Order #{{ order.order_number }}
+        </h1>
+
+        <p>
+          Placed on {{ order.order_date|date:"d M Y, h:i A" }}
+        </p>
+
+      </div>
+
+
+      <div class="order-header-status">
+
+        <span class="order-status-badge status-{{ order.order_status|lower }}">
+          {{ order.order_status }}
+        </span>
+
+        <span class="payment-status-badge payment-{{ order.payment_status|lower }}">
+          Payment: {{ order.payment_status }}
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="row g-4 align-items-start">
+
+      <!-- =================================================
+           LEFT CONTENT
+      ================================================== -->
+
+      <div class="col-xl-8 col-lg-7">
+
+        <!-- ===============================================
+             ORDER INFORMATION
+        ================================================ -->
+
+        <div class="order-detail-card">
+
+          <div class="order-card-heading">
+
+            <div class="order-heading-icon">
+              <i class="bi bi-receipt"></i>
+            </div>
+
+            <div>
+              <span>Order Information</span>
+              <h2>Purchase Details</h2>
+            </div>
+
+          </div>
+
+
+          <div class="order-info-grid">
+
+            <div class="order-info-item">
+
+              <span class="order-info-icon">
+                <i class="bi bi-hash"></i>
+              </span>
+
+              <div>
+                <small>Order Number</small>
+                <strong>{{ order.order_number }}</strong>
+              </div>
+
+            </div>
+
+
+            <div class="order-info-item">
+
+              <span class="order-info-icon">
+                <i class="bi bi-calendar-event"></i>
+              </span>
+
+              <div>
+                <small>Order Date</small>
+                <strong>
+                  {{ order.order_date|date:"d M Y, h:i A" }}
+                </strong>
+              </div>
+
+            </div>
+
+
+            <div class="order-info-item">
+
+              <span class="order-info-icon">
+                <i class="bi bi-truck"></i>
+              </span>
+
+              <div>
+                <small>Order Status</small>
+                <strong>{{ order.order_status }}</strong>
+              </div>
+
+            </div>
+
+
+            <div class="order-info-item">
+
+              <span class="order-info-icon">
+                <i class="bi bi-credit-card"></i>
+              </span>
+
+              <div>
+                <small>Payment Status</small>
+                <strong>{{ order.payment_status }}</strong>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             ORDER TIMELINE
+        ================================================ -->
+
+        <div class="order-detail-card">
+
+          <div class="order-card-heading">
+
+            <div class="order-heading-icon">
+              <i class="bi bi-signpost-split"></i>
+            </div>
+
+            <div>
+              <span>Order Progress</span>
+              <h2>Order Timeline</h2>
+            </div>
+
+          </div>
+
+
+          {% if order.order_status == "Cancelled" %}
+
+            <div class="cancelled-order-box">
+
+              <span>
+                <i class="bi bi-x-circle"></i>
+              </span>
+
+              <div>
+                <strong>Order Cancelled</strong>
+                <p>
+                  This order has been cancelled and will not be delivered.
+                </p>
+              </div>
+
+            </div>
+
+          {% else %}
+
+            <div class="order-timeline">
+
+              <!-- Order placed -->
+
+              <div class="timeline-step completed">
+
+                <div class="timeline-marker">
+                  <i class="bi bi-check-lg"></i>
+                </div>
+
+                <div class="timeline-content">
+                  <strong>Order Placed</strong>
+                  <span>Your order has been successfully placed.</span>
+                </div>
+
+              </div>
+
+
+              <!-- Confirmed -->
+
+              <div
+                class="timeline-step
+                {% if order.order_status == 'Confirmed' or order.order_status == 'Shipped' or order.order_status == 'Delivered' %}
+                  completed
+                {% endif %}"
+              >
+
+                <div class="timeline-marker">
+                  {% if order.order_status == "Confirmed" or order.order_status == "Shipped" or order.order_status == "Delivered" %}
+                    <i class="bi bi-check-lg"></i>
+                  {% else %}
+                    <i class="bi bi-clock"></i>
+                  {% endif %}
+                </div>
+
+                <div class="timeline-content">
+                  <strong>Confirmed</strong>
+                  <span>Your order has been confirmed.</span>
+                </div>
+
+              </div>
+
+
+              <!-- Shipped -->
+
+              <div
+                class="timeline-step
+                {% if order.order_status == 'Shipped' or order.order_status == 'Delivered' %}
+                  completed
+                {% endif %}"
+              >
+
+                <div class="timeline-marker">
+                  {% if order.order_status == "Shipped" or order.order_status == "Delivered" %}
+                    <i class="bi bi-check-lg"></i>
+                  {% else %}
+                    <i class="bi bi-truck"></i>
+                  {% endif %}
+                </div>
+
+                <div class="timeline-content">
+                  <strong>Shipped</strong>
+                  <span>Your order is on the way.</span>
+                </div>
+
+              </div>
+
+
+              <!-- Delivered -->
+
+              <div
+                class="timeline-step
+                {% if order.order_status == 'Delivered' %}
+                  completed
+                {% endif %}"
+              >
+
+                <div class="timeline-marker">
+                  {% if order.order_status == "Delivered" %}
+                    <i class="bi bi-check-lg"></i>
+                  {% else %}
+                    <i class="bi bi-house-check"></i>
+                  {% endif %}
+                </div>
+
+                <div class="timeline-content">
+                  <strong>Delivered</strong>
+                  <span>Your order has been delivered.</span>
+                </div>
+
+              </div>
+
+            </div>
+
+          {% endif %}
+
+        </div>
+
+
+        <!-- ===============================================
+             DELIVERY ADDRESS
+        ================================================ -->
+
+        <div class="order-detail-card">
+
+          <div class="order-card-heading">
+
+            <div class="order-heading-icon">
+              <i class="bi bi-geo-alt"></i>
+            </div>
+
+            <div>
+              <span>Shipping Information</span>
+              <h2>Delivery Address</h2>
+            </div>
+
+          </div>
+
+
+          {% if order.address %}
+
+            <div class="order-address-box">
+
+              <span class="order-address-icon">
+                <i class="bi bi-house-door"></i>
+              </span>
+
+              <div>
+
+                <strong>
+                  {{ order.address.full_name|default:request.user.username }}
+                </strong>
+
+                <p>
+                  {{ order.address.address_line1 }}
+
+                  {% if order.address.address_line2 %}
+                    , {{ order.address.address_line2 }}
+                  {% endif %}
+                </p>
+
+                <p>
+                  {{ order.address.city }},
+                  {{ order.address.state }}
+                  - {{ order.address.postal_code }}
+                </p>
+
+                {% if order.address.phone %}
+                  <span>
+                    <i class="bi bi-telephone"></i>
+                    {{ order.address.phone }}
+                  </span>
+                {% endif %}
+
+              </div>
+
+            </div>
+
+          {% else %}
+
+            <div class="order-address-box">
+
+              <span class="order-address-icon">
+                <i class="bi bi-geo-alt"></i>
+              </span>
+
+              <div>
+                <strong>Address unavailable</strong>
+                <p>No delivery address is attached to this order.</p>
+              </div>
+
+            </div>
+
+          {% endif %}
+
+        </div>
+
+
+        <!-- ===============================================
+             ORDERED ITEMS
+        ================================================ -->
+
+        <div class="order-detail-card">
+
+          <div class="order-card-heading">
+
+            <div class="order-heading-icon">
+              <i class="bi bi-bag-check"></i>
+            </div>
+
+            <div>
+              <span>Purchased Products</span>
+              <h2>Ordered Items</h2>
+            </div>
+
+          </div>
+
+
+          <div class="ordered-item-list">
+
+            {% for item in order.items.all %}
+
+              <article class="ordered-item">
+
+                <!-- Fixed-size image -->
+
+                <a
+                  href="{% url 'product_details' item.product.id %}"
+                  class="ordered-item-image"
+                >
+
+                  {% if item.product.images.first %}
+
+                    <img
+                      src="{{ item.product.images.first.image.url }}"
+                      alt="{{ item.product.product_name }}"
+                      loading="lazy"
+                    >
+
+                  {% else %}
+
+                    <div class="ordered-item-placeholder">
+                      <i class="bi bi-image"></i>
+                    </div>
+
+                  {% endif %}
+
+                </a>
+
+
+                <!-- Item information -->
+
+                <div class="ordered-item-info">
+
+                  <a
+                    href="{% url 'shop_page' %}?category={{ item.product.category.id }}"
+                    class="ordered-item-category"
+                  >
+                    {{ item.product.category.category_name }}
+                  </a>
+
+
+                  <h3>
+
+                    <a href="{% url 'product_details' item.product.id %}">
+                      {{ item.product.product_name }}
+                    </a>
+
+                  </h3>
+
+
+                  {% if item.product.short_description %}
+
+                    <p>
+                      {{ item.product.short_description|truncatechars:90 }}
+                    </p>
+
+                  {% endif %}
+
+
+                  <div class="ordered-item-meta">
+
+                    <span>
+                      <i class="bi bi-box"></i>
+                      Quantity:
+                      <strong>{{ item.quantity }}</strong>
+                    </span>
+
+                    <span>
+                      <i class="bi bi-currency-rupee"></i>
+                      Unit price:
+                      <strong>₹{{ item.price|floatformat:2 }}</strong>
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <!-- Item total -->
+
+                <div class="ordered-item-total">
+
+                  <small>Item Total</small>
+
+                  <strong>
+                    ₹{{ item.get_total|default:item.price|floatformat:2 }}
+                  </strong>
+
+                  <a href="{% url 'product_details' item.product.id %}">
+                    View Product
+                  </a>
+
+                </div>
+
+              </article>
+
+
+            {% empty %}
+
+              <div class="order-empty-items">
+
+                <i class="bi bi-bag-x"></i>
+
+                <h3>No order items found</h3>
+
+                <p>
+                  Products attached to this order will appear here.
+                </p>
+
+              </div>
+
+            {% endfor %}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           RIGHT SUMMARY SIDEBAR
+      ================================================== -->
+
+      <div class="col-xl-4 col-lg-5">
+
+        <aside class="order-summary-card">
+
+          <div class="order-summary-heading">
+
+            <span>
+              <i class="bi bi-receipt-cutoff"></i>
+            </span>
+
+            <div>
+              <small>Payment Overview</small>
+              <h2>Order Summary</h2>
+            </div>
+
+          </div>
+
+
+          <div class="order-summary-list">
+
+            <div>
+              <span>Status</span>
+
+              <strong class="summary-status status-{{ order.order_status|lower }}">
+                {{ order.order_status }}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>Payment</span>
+
+              <strong>
+                {{ order.payment_status }}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>Order Date</span>
+
+              <strong>
+                {{ order.order_date|date:"d M Y" }}
+              </strong>
+            </div>
+
+
+            {% if order.payment_method %}
+
+              <div>
+                <span>Payment Method</span>
+
+                <strong>
+                  {{ order.payment_method }}
+                </strong>
+              </div>
+
+            {% endif %}
+
+          </div>
+
+
+          <div class="order-summary-divider"></div>
+
+
+          <div class="order-summary-prices">
+
+            <div>
+              <span>Subtotal</span>
+
+              <strong>
+                ₹{{ order.total_amount|floatformat:2 }}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>Shipping</span>
+
+              <strong class="free-shipping">
+                Free
+              </strong>
+            </div>
+
+          </div>
+
+
+          <div class="order-summary-total">
+
+            <span>Total</span>
+
+            <strong>
+              ₹{{ order.total_amount|floatformat:2 }}
+            </strong>
+
+          </div>
+
+
+          <a
+            href="{% url 'download_invoice' order.id %}"
+            class="download-invoice-btn"
+          >
+            <i class="bi bi-download"></i>
+            Download Invoice
+          </a>
+
+
+          {% if order.order_status == "Pending" or order.order_status == "Confirmed" %}
+
+            <button
+              type="button"
+              class="cancel-order-btn"
+              data-url="{% url 'cancel_order' order.id %}"
+            >
+              <i class="bi bi-x-circle"></i>
+              Cancel Order
+            </button>
+
+          {% endif %}
+
+
+          <div class="order-secure-message">
+
+            <i class="bi bi-shield-check"></i>
+
+            <span>
+              Secure order details with Velora
+            </span>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}

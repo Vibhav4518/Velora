@@ -1,134 +1,612 @@
-{% extends "base.html" %} {% block slider %}
+{% extends "base.html" %}
+{% load static %}
 
-<!-- Shop Section -->
+{% block content %}
 
-<section class="shop py-5">
+<section
+  class="velora-shop-page"
+  id="shopPage"
+>
+
   <div class="container">
-    <div class="row">
-      <!-- Sidebar -->
 
-      <div class="col-lg-3">
-        <div class="card p-4 mb-4">
-          <h4 class="mb-3">Filters</h4>
+    <!-- ================================================= -->
+    <!-- SHOP HERO -->
+    <!-- ================================================= -->
 
-          <input
-            type="text"
-            class="form-control mb-3"
-            placeholder="Search Products"
-          />
+    <div class="shop-page-hero">
 
-          <h5>Categories</h5>
+      <div class="shop-hero-content">
 
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" />
+        <span class="shop-hero-label">
 
-            <label> Fashion </label>
-          </div>
+          <i class="bi bi-bag-heart"></i>
 
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" />
+          Velora Collection
 
-            <label> Electronics </label>
-          </div>
-
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" />
-
-            <label> Beauty </label>
-          </div>
-
-          <hr />
-
-          <h5>Price Range</h5>
-
-          <input type="range" class="form-range" />
-
-          <p>₹0 - ₹10000</p>
-        </div>
-      </div>
-
-      {% endblock %} {% block content %}
+        </span>
 
 
-      {% for product in products%}
+        <h1>
+          Discover Products Made For You
+        </h1>
 
-      <div class="col-lg-3 col-md-6">
-        <div
-          class="card border-0 shadow-sm rounded-4 overflow-hidden product-card"
-        >
-          <!-- Badge -->
-          <span class="badge bg-danger position-absolute m-3"> Sale </span>
 
-          <!-- Image -->
+        <p>
+          Explore fashion, footwear and lifestyle products selected
+          for quality, comfort and everyday style.
+        </p>
+
+
+        <div class="shop-hero-actions">
 
           <a
-            href="{% url 'product_details' product.id %}"
-            class="stretched-link"
+            href="#shopProductsSection"
+            class="shop-hero-primary-btn"
           >
-            <div class="product-image-wrapper">
-              <img
-                src="{{ product.images.first.image.url }}"
-                class="card-img-top product-image"
-                alt="Shoes"
-              />
-            </div>
+
+            Browse Products
+
+            <i class="bi bi-arrow-down"></i>
+
           </a>
 
-          <!-- Body -->
-          <div class="card-body">
-            <h5 class="fw-bold">{{ product.product_name }}</h5>
 
-            <p class="text-muted small">{{ product.short_description }}</p>
+          <a
+            href="{% url 'categories_page' %}"
+            class="shop-hero-outline-btn"
+          >
 
-            <!-- Rating -->
+            View Categories
 
-            <!-- Price -->
-            <div class="d-flex align-items-center gap-2 mb-3">
-              <h5 class="fw-bold text-dark mb-0">₹{{ product.price }}</h5>
-            </div>
+            <i class="bi bi-grid"></i>
 
-            <!-- Buttons -->
-            <div class="d-flex gap-2">
-              <a href="{% url 'add_to_cart' product.id %}"
-   class="btn btn-dark w-100 rounded-pill">
-    <i class="bi bi-cart-plus me-2"></i>
-    Add To Cart
-</a>
+          </a>
 
-             <button
-    class="btn btn-outline-dark rounded-pill wishlist-btn"
-    data-product="{{ product.id }}"
->
-    <i class="bi bi-heart"></i>
-</button>
-            </div>
-          </div>
         </div>
+
       </div>
 
-      {% endfor %}
 
-        <!-- Pagination -->
+      <div class="shop-hero-visual">
 
-        <nav class="mt-5">
-          <ul class="pagination justify-content-center">
-            <li class="page-item">
-              <a class="page-link"> 1 </a>
-            </li>
+        <div class="shop-hero-icon">
 
-            <li class="page-item">
-              <a class="page-link"> 2 </a>
-            </li>
+          <i class="bi bi-bag-check-fill"></i>
 
-            <li class="page-item">
-              <a class="page-link"> 3 </a>
-            </li>
-          </ul>
-        </nav>
+        </div>
+
+
+        <div>
+
+          <strong>
+            Premium Velora Products
+          </strong>
+
+          <span>
+            Quality products for your lifestyle
+          </span>
+
+        </div>
+
       </div>
+
+
+      <span class="shop-hero-shape shape-one"></span>
+      <span class="shop-hero-shape shape-two"></span>
+
     </div>
-  </div>
-</section>
 
+
+    <!-- ================================================= -->
+    <!-- SHOP BENEFITS -->
+    <!-- ================================================= -->
+
+    <div class="shop-benefit-grid">
+
+      <div class="shop-benefit-card">
+
+        <span>
+          <i class="bi bi-shield-check"></i>
+        </span>
+
+        <div>
+
+          <strong>
+            Genuine Products
+          </strong>
+
+          <small>
+            Quality guaranteed
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="shop-benefit-card">
+
+        <span>
+          <i class="bi bi-truck"></i>
+        </span>
+
+        <div>
+
+          <strong>
+            Fast Delivery
+          </strong>
+
+          <small>
+            Quick order dispatch
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="shop-benefit-card">
+
+        <span>
+          <i class="bi bi-lock"></i>
+        </span>
+
+        <div>
+
+          <strong>
+            Secure Payment
+          </strong>
+
+          <small>
+            Protected checkout
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="shop-benefit-card">
+
+        <span>
+          <i class="bi bi-arrow-repeat"></i>
+        </span>
+
+        <div>
+
+          <strong>
+            Easy Returns
+          </strong>
+
+          <small>
+            Simple return process
+          </small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- PRODUCT SECTION -->
+    <!-- ================================================= -->
+
+    <div
+      class="shop-products-section"
+      id="shopProductsSection"
+    >
+
+      <div class="shop-section-heading">
+
+        <div>
+
+          <span>
+            Velora Store
+          </span>
+
+          <h2>
+            Explore Our Collection
+          </h2>
+
+          <p>
+            Search, filter and discover products that match your style.
+          </p>
+
+        </div>
+
+
+        <div class="shop-product-counter">
+
+          <strong id="visibleShopProductCount">
+            {{ products|length }}
+          </strong>
+
+          <small>
+            Products
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- SEARCH AND FILTER TOOLBAR -->
+      <!-- ================================================= -->
+
+      <div class="shop-filter-panel">
+
+        <div class="shop-search-field">
+
+          <label for="shopSearchInput">
+            Search Products
+          </label>
+
+
+          <div class="shop-search-input-wrap">
+
+            <i class="bi bi-search"></i>
+
+
+            <input
+              type="search"
+              id="shopSearchInput"
+              placeholder="Search products, categories..."
+              autocomplete="off"
+            >
+
+
+            <button
+              type="button"
+              id="clearShopSearch"
+              class="shop-search-clear d-none"
+              aria-label="Clear search"
+            >
+
+              <i class="bi bi-x-lg"></i>
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div class="shop-filter-field">
+
+          <label for="shopCategoryFilter">
+            Category
+          </label>
+
+
+          <div class="shop-select-wrap">
+
+            <i class="bi bi-grid"></i>
+
+
+            <select id="shopCategoryFilter">
+
+              <option value="all">
+                All Categories
+              </option>
+
+
+              {% for category in categories %}
+
+                <option
+                  value="{{ category.id }}"
+                  {% if request.GET.category == category.id|stringformat:"s" %}
+                    selected
+                  {% endif %}
+                >
+
+                  {{ category.category_name }}
+
+                </option>
+
+              {% endfor %}
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <div class="shop-filter-field">
+
+          <label for="shopPriceFilter">
+            Price Range
+          </label>
+
+
+          <div class="shop-select-wrap">
+
+            <i class="bi bi-currency-rupee"></i>
+
+
+            <select id="shopPriceFilter">
+
+              <option value="all">
+                All Prices
+              </option>
+
+              <option value="0-500">
+                Under ₹500
+              </option>
+
+              <option value="500-1000">
+                ₹500 – ₹1,000
+              </option>
+
+              <option value="1000-2000">
+                ₹1,000 – ₹2,000
+              </option>
+
+              <option value="2000-plus">
+                Above ₹2,000
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <div class="shop-filter-field">
+
+          <label for="shopSortFilter">
+            Sort Products
+          </label>
+
+
+          <div class="shop-select-wrap">
+
+            <i class="bi bi-sort-down"></i>
+
+
+            <select id="shopSortFilter">
+
+              <option value="featured">
+                Featured
+              </option>
+
+              <option value="newest">
+                Newest First
+              </option>
+
+              <option value="price-low">
+                Price: Low to High
+              </option>
+
+              <option value="price-high">
+                Price: High to Low
+              </option>
+
+              <option value="name-asc">
+                Name: A to Z
+              </option>
+
+              <option value="name-desc">
+                Name: Z to A
+              </option>
+
+              <option value="rating-high">
+                Highest Rated
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="shop-reset-filter-btn"
+          id="resetShopFilters"
+        >
+
+          <i class="bi bi-arrow-counterclockwise"></i>
+
+          Reset
+
+        </button>
+
+      </div>
+
+
+      <!-- Active filter information -->
+
+      <div
+        class="shop-active-filter-bar d-none"
+        id="shopFilterStatus"
+      >
+
+        <div>
+
+          <i class="bi bi-funnel-fill"></i>
+
+          <span id="shopFilterStatusText">
+            Filtered products
+          </span>
+
+        </div>
+
+
+        <button
+          type="button"
+          id="clearAllShopFilters"
+        >
+
+          Clear All
+
+          <i class="bi bi-x-lg"></i>
+
+        </button>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- PRODUCT GRID -->
+      <!-- ================================================= -->
+
+      <div
+        class="row g-3 shop-product-grid"
+        id="shopProductGrid"
+      >
+
+        {% for product in products %}
+
+          <div
+            class="col-xl-3 col-lg-4 col-md-6 col-sm-6 shop-product-column"
+            data-shop-product
+            data-name="{{ product.product_name|lower }}"
+            data-description="{{ product.short_description|default:''|lower }}"
+            data-category="{{ product.category.id }}"
+            data-category-name="{{ product.category.category_name|lower }}"
+            data-price="{{ product.current_price|default:product.price }}"
+            data-created="{{ product.created_at|date:'U' }}"
+            data-rating="{{ product.average_rating|default:0 }}"
+            data-original-index="{{ forloop.counter0 }}"
+          >
+
+            {% include "components/productCard.html" with card_product=product %}
+
+          </div>
+
+
+        {% empty %}
+
+          <div class="col-12">
+
+            <div class="shop-empty-state">
+
+              <div class="shop-empty-icon">
+
+                <i class="bi bi-box-seam"></i>
+
+              </div>
+
+
+              <h3>
+                No Products Available
+              </h3>
+
+
+              <p>
+                Products will appear here after they are added.
+              </p>
+
+
+              <a href="{% url 'categories_page' %}">
+
+                Browse Categories
+
+                <i class="bi bi-arrow-right"></i>
+
+              </a>
+
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+
+      <!-- No matching result -->
+
+      <div
+        class="shop-empty-state d-none"
+        id="shopSearchEmptyState"
+      >
+
+        <div class="shop-empty-icon">
+
+          <i class="bi bi-search"></i>
+
+        </div>
+
+
+        <h3>
+          No Matching Products
+        </h3>
+
+
+        <p>
+          Try another product name, category or price range.
+        </p>
+
+
+        <button
+          type="button"
+          id="emptyResetShopFilters"
+        >
+
+          Reset Filters
+
+          <i class="bi bi-arrow-counterclockwise"></i>
+
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- DEAL PROMOTION -->
+    <!-- ================================================= -->
+
+    <div class="shop-deal-promotion">
+
+      <div>
+
+        <span>
+          Limited-Time Savings
+        </span>
+
+
+        <h2>
+          Discover Today’s Best Velora Deals
+        </h2>
+
+
+        <p>
+          Explore selected products with exclusive discounts before
+          the offers expire.
+        </p>
+
+
+        <a href="{% url 'deals_page' %}">
+
+          View Deals
+
+          <i class="bi bi-lightning-charge-fill"></i>
+
+        </a>
+
+      </div>
+
+
+      <div class="shop-deal-promo-icon">
+
+        <i class="bi bi-tags-fill"></i>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
 
 {% endblock %}

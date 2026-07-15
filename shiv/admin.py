@@ -2,7 +2,9 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import ProductImage, Role, Permission, User, Category, Product, Cart, CartItem
+from .models import ProductImage, Role, Permission, User, Category, Product, Cart, CartItem, BlogCategory, BlogPost
+
+
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
@@ -50,3 +52,60 @@ class AdminAddTocard(admin.ModelAdmin):
 class PermissionAdmin(admin.ModelAdmin):
     list_display = ('permission_name', 'created_at')
     search_fields = ('permission_name',)
+    
+    
+@admin.register(BlogCategory)
+class BlogCategoryAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "category_name",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "category_name",
+    )
+
+    prepopulated_fields = {
+        "slug": (
+            "category_name",
+        )
+    }
+
+
+@admin.register(BlogPost)
+class BlogPostAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "title",
+        "category",
+        "author",
+        "is_featured",
+        "is_published",
+        "views_count",
+        "published_at",
+    )
+
+    list_filter = (
+        "is_featured",
+        "is_published",
+        "category",
+    )
+
+    search_fields = (
+        "title",
+        "short_description",
+        "content",
+    )
+
+    prepopulated_fields = {
+        "slug": (
+            "title",
+        )
+    }
+    

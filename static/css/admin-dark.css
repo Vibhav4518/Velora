@@ -276,3 +276,7 @@ body.admin-dark .swal2-cancel {
   background: #334155 !important;
   color: #fff !important;
 }
+body.admin-dark .order-item-image {
+  border-color: #334155;
+  background: #0f172a;
+}

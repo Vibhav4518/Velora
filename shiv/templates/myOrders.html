@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="checkout-page">
+  <div class="container">
+
+    <div class="checkout-header mb-5">
+      <div>
+        <h2>My Orders</h2>
+        <p>Track, view and manage your recent purchases</p>
+      </div>
+
+      <a href="{% url 'shop_page' %}" class="back-cart-btn">
+        <i class="bi bi-arrow-left"></i> Continue Shopping
+      </a>
+    </div>
+
+    {% if orders %}
+      <div class="orders-list">
+
+        {% for order in orders %}
+        <div class="order-card">
+
+          <div class="order-top">
+            <div>
+              <h4>#{{ order.order_number }}</h4>
+              <p>{{ order.order_date|date:"d M Y, h:i A" }}</p>
+            </div>
+
+            <span class="order-status 
+              {% if order.order_status == 'Completed' or order.order_status == 'Delivered' %}completed
+              {% elif order.order_status == 'Cancelled' %}cancelled
+              {% else %}pending{% endif %}
+            ">
+              {{ order.order_status }}
+            </span>
+          </div>
+
+          <div class="order-middle">
+            <div>
+              <small>Total Amount</small>
+              <h5>₹{{ order.total_amount }}</h5>
+            </div>
+
+            <div>
+              <small>Payment Status</small>
+              <h5>{{ order.payment_status }}</h5>
+            </div>
+          </div>
+
+          <div class="order-bottom">
+            <a href="{% url 'my_order_details' order.id %}" class="order-view-btn">
+              <i class="bi bi-eye"></i> View Details
+            </a>
+
+            <a href="{% url 'download_invoice' order.id %}" class="order-invoice-btn">
+              <i class="bi bi-download"></i> Invoice
+            </a>
+
+            {% if order.order_status != "Delivered" and order.order_status != "Cancelled" %}
+            <a href="{% url 'cancel_order' order.id %}" class="order-cancel-btn">
+              <i class="bi bi-x-circle"></i> Cancel Order
+            </a>
+            {% endif %}
+
+            <a href="{% url 'shop_page' %}" class="order-buy-btn">
+              <i class="bi bi-bag"></i> Buy Again
+            </a>
+          </div>
+
+        </div>
+        {% endfor %}
+
+      </div>
+    {% else %}
+
+      <div class="empty-orders">
+        <i class="bi bi-bag-x"></i>
+        <h3>No orders yet</h3>
+        <p>You have not placed any order yet.</p>
+        <a href="{% url 'shop_page' %}">Start Shopping</a>
+      </div>
+
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock %}
