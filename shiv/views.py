@@ -3326,114 +3326,387 @@ def category_list(request):
     return render(request,"adminCategoryList.html",context)
 
 @role_permission_required("Can Manage Products")
+@login_required
 def add_product(request):
-    categories = Category.objects.filter(is_active=True)
+    categories = Category.objects.filter(
+        is_active=True
+    ).order_by(
+        "category_name"
+    )
 
-    if request.method == "POST":
-        product_name = request.POST.get("product_name")
-        short_description = request.POST.get("short_description")
-        long_description = request.POST.get("long_description")
-        price = request.POST.get("price")
-        stock_quantity = request.POST.get("stock_quantity")
-        category_id = request.POST.get("category_id")
-        product_image = request.FILES.get("product_image")
-
-        if not product_name or not price or not stock_quantity or not category_id:
-            messages.error(request, "All required fields must be filled.")
-            return render(request, "adminAddProducts.html", {"categories": categories})
-
-        if Product.objects.filter(product_name__iexact=product_name).exists():
-            messages.error(request, "Product already exists.")
-            return render(request, "adminAddProducts.html", {"categories": categories})
-
-        category = get_object_or_404(Category, id=category_id)
-
-        product = Product.objects.create(
-            product_name=product_name,
-            short_description=short_description,
-            long_description=long_description,
-            price=price,
-            stock_quantity=stock_quantity,
-            category=category
+    if request.method != "POST":
+        return render(
+            request,
+            "adminAddProducts.html",
+            {
+                "categories": categories,
+            }
         )
 
-        if product_image:
-            ProductImage.objects.create(
-                product=product,
-                image=product_image,
-                is_primary=True
-            )
+    product_name = request.POST.get(
+        "product_name",
+        ""
+    ).strip()
 
-        messages.success(request, "Product added successfully.")
-        return redirect("admin_products")
+    short_description = request.POST.get(
+        "short_description",
+        ""
+    ).strip()
 
-    return render(request, "adminAddProducts.html", {"categories": categories})
+    long_description = request.POST.get(
+        "long_description",
+        ""
+    ).strip()
+
+    price = request.POST.get(
+        "price",
+        ""
+    ).strip()
+
+    stock_quantity = request.POST.get(
+        "stock_quantity",
+        ""
+    ).strip()
+
+    category_id = request.POST.get(
+        "category_id",
+        ""
+    ).strip()
+
+    is_active = (
+        request.POST.get("is_active")
+        == "True"
+    )
+
+    product_images = request.FILES.getlist(
+        "product_images"
+    )
+
+    if (
+        not product_name
+        or not price
+        or not stock_quantity
+        or not category_id
+    ):
+        message = (
+            "Please fill all required product fields."
+        )
+
+        if request.headers.get(
+            "X-Requested-With"
+        ) == "XMLHttpRequest":
+            return JsonResponse({
+                "success": False,
+                "status": "error",
+                "message": message,
+            }, status=400)
+
+        messages.error(
+            request,
+            message
+        )
+
+        return redirect(
+            "admin_products"
+        )
+
+    if Product.objects.filter(
+        product_name__iexact=product_name
+    ).exists():
+        message = "Product already exists."
+
+        if request.headers.get(
+            "X-Requested-With"
+        ) == "XMLHttpRequest":
+            return JsonResponse({
+                "success": False,
+                "status": "error",
+                "message": message,
+            }, status=400)
+
+        messages.error(
+            request,
+            message
+        )
+
+        return redirect(
+            "admin_products"
+        )
+
+    category = get_object_or_404(
+        Category,
+        id=category_id
+    )
+
+    product = Product.objects.create(
+        product_name=product_name,
+        short_description=short_description,
+        long_description=long_description,
+        price=price,
+        stock_quantity=stock_quantity,
+        category=category,
+        is_active=is_active,
+    )
+
+    for index, uploaded_image in enumerate(
+        product_images
+    ):
+        ProductImage.objects.create(
+            product=product,
+            image=uploaded_image,
+            is_primary=(index == 0),
+        )
+
+    response_data = {
+        "success": True,
+        "status": "success",
+        "message": "Product added successfully.",
+        "reload_required": True,
+        "product": {
+            "id": str(product.id),
+            "name": product.product_name,
+            "category": category.category_name,
+            "price": str(product.price),
+            "stock": product.stock_quantity,
+            "status": (
+                "Active"
+                if product.is_active
+                else "Inactive"
+            ),
+            "image": product.primary_image_url,
+        },
+    }
+
+    if request.headers.get(
+        "X-Requested-With"
+    ) == "XMLHttpRequest":
+        return JsonResponse(
+            response_data
+        )
+
+    messages.success(
+        request,
+        response_data["message"]
+    )
+
+    return redirect(
+        "admin_products"
+    )
 
 @login_required
+@role_permission_required("Can Manage Products")
 def admin_products(request):
-    query = request.GET.get("q", "")
+    query = request.GET.get(
+        "q",
+        ""
+    ).strip()
 
-    products = Product.objects.all().order_by("-created_at")
+    products = (
+        Product.objects
+        .select_related("category")
+        .prefetch_related("images")
+        .order_by("-created_at")
+    )
 
     if query:
-        products = products.filter(product_name__icontains=query)
+        products = products.filter(
+            Q(product_name__icontains=query)
+            | Q(category__category_name__icontains=query)
+            | Q(short_description__icontains=query)
+        )
 
     context = {
-    "products": products,
-    "categories": Category.objects.filter(is_active=True),
-    "total_products": Product.objects.count(),
-    "active_products": Product.objects.filter(is_active=True).count(),
-    "total_categories": Category.objects.count(),
-}
+        "products": products,
 
-    return render(request, "adminProducts.html", context)
+        "categories": (
+            Category.objects
+            .filter(is_active=True)
+            .order_by("category_name")
+        ),
+
+        "total_products": (
+            Product.objects.count()
+        ),
+
+        "active_products": (
+            Product.objects
+            .filter(is_active=True)
+            .count()
+        ),
+
+        "total_categories": (
+            Category.objects.count()
+        ),
+
+        "search_query": query,
+    }
+
+    context.update(
+        get_admin_permissions_context(
+            request.user
+        )
+    )
+
+    return render(
+        request,
+        "adminProducts.html",
+        context
+    )
 
 @role_permission_required("Can Manage Products")
 @login_required
 def edit_product_admin(request, id):
-    product = get_object_or_404(Product, id=id)
+    product = get_object_or_404(
+        Product.objects.select_related(
+            "category"
+        ).prefetch_related(
+            "images"
+        ),
+        id=id
+    )
 
-    if request.method == "POST":
-        product.product_name = request.POST.get("product_name")
-        product.short_description = request.POST.get("short_description")
-        product.long_description = request.POST.get("long_description")
-        product.price = request.POST.get("price")
-        product.stock_quantity = request.POST.get("stock_quantity")
-        product.is_active = request.POST.get("is_active") == "True"
+    if request.method != "POST":
+        return redirect(
+            "admin_products"
+        )
 
-        category_id = request.POST.get("category_id")
-        if category_id:
-            product.category = get_object_or_404(Category, id=category_id)
+    product_name = request.POST.get(
+        "product_name",
+        ""
+    ).strip()
 
-        product.save()
+    price = request.POST.get(
+        "price",
+        ""
+    ).strip()
 
-        product_image = request.FILES.get("product_image")
-        if product_image:
+    stock_quantity = request.POST.get(
+        "stock_quantity",
+        ""
+    ).strip()
+
+    category_id = request.POST.get(
+        "category_id",
+        ""
+    ).strip()
+
+    if (
+        not product_name
+        or not price
+        or not stock_quantity
+        or not category_id
+    ):
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                "Please fill all required fields."
+            ),
+        }, status=400)
+
+    duplicate_product = Product.objects.filter(
+        product_name__iexact=product_name
+    ).exclude(
+        id=product.id
+    ).exists()
+
+    if duplicate_product:
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                "Another product already uses this name."
+            ),
+        }, status=400)
+
+    category = get_object_or_404(
+        Category,
+        id=category_id
+    )
+
+    product.product_name = product_name
+    product.short_description = request.POST.get(
+        "short_description",
+        ""
+    ).strip()
+
+    product.long_description = request.POST.get(
+        "long_description",
+        ""
+    ).strip()
+
+    product.price = price
+    product.stock_quantity = stock_quantity
+    product.category = category
+
+    product.is_active = (
+        request.POST.get("is_active")
+        == "True"
+    )
+
+    product.save()
+
+    uploaded_images = request.FILES.getlist(
+        "product_images"
+    )
+
+    if uploaded_images:
+        # Old images remain available but are no longer primary.
+        ProductImage.objects.filter(
+            product=product
+        ).update(
+            is_primary=False
+        )
+
+        for index, uploaded_image in enumerate(
+            uploaded_images
+        ):
             ProductImage.objects.create(
                 product=product,
-                image=product_image,
-                is_primary=True
+                image=uploaded_image,
+                is_primary=(index == 0),
             )
 
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return JsonResponse({
-                "status": "success",
-                "message": "Product updated successfully.",
-                "entity": {
-                    "type": "product",
-                    "id": str(product.id),
-                    "fields": {
-                        "name": product.product_name,
-                        "category": product.category.category_name,
-                        "price": f"₹{product.price}",
-                        "stock": product.stock_quantity,
-                        "status": "Active" if product.is_active else "Inactive",
-                    }
-                }
-            })
-        
-        messages.success(request, "Product updated successfully.")
-        return redirect("admin_products")
+    product.refresh_from_db()
+
+    response_data = {
+        "success": True,
+        "status": "success",
+        "message": "Product updated successfully.",
+        "reload_required": True,
+        "entity": {
+            "type": "product",
+            "id": str(product.id),
+            "fields": {
+                "name": product.product_name,
+                "category": category.category_name,
+                "price": f"₹{product.price}",
+                "stock": product.stock_quantity,
+                "status": (
+                    "Active"
+                    if product.is_active
+                    else "Inactive"
+                ),
+                "image": product.primary_image_url,
+            },
+        },
+    }
+
+    if request.headers.get(
+        "X-Requested-With"
+    ) == "XMLHttpRequest":
+        return JsonResponse(
+            response_data
+        )
+
+    messages.success(
+        request,
+        response_data["message"]
+    )
+
+    return redirect(
+        "admin_products"
+    )
         
         
         

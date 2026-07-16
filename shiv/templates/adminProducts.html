@@ -43,6 +43,7 @@
         <p>Total Products</p>
         <h3>{{ total_products|default:0 }}</h3>
       </div>
+
       <div class="product-small-icon bg-blue">
         <i class="bi bi-box-seam"></i>
       </div>
@@ -55,6 +56,7 @@
         <p>Active Products</p>
         <h3>{{ active_products|default:0 }}</h3>
       </div>
+
       <div class="product-small-icon bg-green">
         <i class="bi bi-check2-circle"></i>
       </div>
@@ -67,6 +69,7 @@
         <p>Categories</p>
         <h3>{{ total_categories|default:0 }}</h3>
       </div>
+
       <div class="product-small-icon bg-purple">
         <i class="bi bi-tags"></i>
       </div>
@@ -84,8 +87,9 @@
         name="q"
         class="form-control"
         placeholder="Search product..."
-        value="{{ request.GET.q }}"
-      />
+        value="{{ search_query }}"
+      >
+
       <button type="submit">
         <i class="bi bi-search"></i>
       </button>
@@ -108,376 +112,526 @@
 
       <tbody id="productTableBody">
         {% for product in products %}
-        <tr id="product-row-{{ product.id }}">
-          <td>
-            <div class="product-info-box">
-              {% if product.images.first %}
-                <img src="{{ product.images.first.image.url }}" alt="product">
+          <tr id="product-row-{{ product.id }}">
+            <td>
+              <div class="product-info-box">
+                {% if product.primary_image_url %}
+                  <img
+                    src="{{ product.primary_image_url }}"
+                    alt="{{ product.product_name }}"
+                    class="product-list-image"
+                    loading="lazy"
+                  >
+                {% else %}
+                  <div class="product-placeholder">
+                    <i class="bi bi-image"></i>
+                  </div>
+                {% endif %}
+
+                <div>
+                  <h6 class="product-name">
+                    {{ product.product_name }}
+                  </h6>
+
+                  <small>
+                    {{ product.brand|default:"Velora Product" }}
+                  </small>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span class="role-pill gray product-category">
+                {{ product.category.category_name|default:"No Category" }}
+              </span>
+            </td>
+
+            <td class="product-price">
+              ₹{{ product.price }}
+            </td>
+
+            <td class="product-stock">
+              {{ product.stock_quantity|default:0 }}
+            </td>
+
+            <td>
+              {% if product.is_active %}
+                <span class="status active product-status">
+                  Active
+                </span>
               {% else %}
-                <div class="product-placeholder">
-                  <i class="bi bi-image"></i>
-                </div>
+                <span class="status inactive product-status">
+                  Inactive
+                </span>
               {% endif %}
+            </td>
 
-              <div>
-                <h6 class="product-name">{{ product.product_name }}</h6>
-                <small>{{ product.brand|default:"Velora Product" }}</small>
+            <td>
+              {{ product.created_at|date:"d M Y" }}
+            </td>
+
+            <td class="text-end">
+              <div class="dropdown">
+                <button
+                  type="button"
+                  class="action-dropdown-btn"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
+                  <li>
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      data-bs-toggle="modal"
+                      data-bs-target="#viewProduct{{ product.id }}"
+                    >
+                      <i class="bi bi-eye me-2"></i>
+                      View
+                    </button>
+                  </li>
+
+                  <li>
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editProduct{{ product.id }}"
+                    >
+                      <i class="bi bi-pencil-square me-2"></i>
+                      Edit
+                    </button>
+                  </li>
+
+                  <li>
+                    <a
+                      href="{% url 'delete_product_admin' product.id %}"
+                      class="dropdown-item text-danger delete-product-btn"
+                      data-ajax-action="delete"
+                      data-method="POST"
+                      data-remove-target="tr"
+                      data-confirm="This product will be deleted permanently!"
+                    >
+                      <i class="bi bi-trash me-2"></i>
+                      Delete
+                    </a>
+                  </li>
+                </ul>
               </div>
-            </div>
-          </td>
-
-          <td>
-            <span class="role-pill gray product-category">
-              {{ product.category.category_name|default:"No Category" }}
-            </span>
-          </td>
-
-          <td class="product-price">₹{{ product.price }}</td>
-
-          <td class="product-stock">
-            {{ product.stock_quantity|default:0 }}
-          </td>
-
-          <td>
-            {% if product.is_active %}
-              <span class="status active product-status">Active</span>
-            {% else %}
-              <span class="status inactive product-status">Inactive</span>
-            {% endif %}
-          </td>
-
-          <td>{{ product.created_at|date:"d M Y" }}</td>
-
-          <td class="text-end">
-            <div class="dropdown">
-              <button class="action-dropdown-btn" data-bs-toggle="dropdown">
-                <i class="bi bi-three-dots-vertical"></i>
-              </button>
-
-              <ul class="dropdown-menu dropdown-menu-end action-menu admin-action-menu">
-                <li>
-                  <button
-                    type="button"
-                    class="dropdown-item"
-                    data-bs-toggle="modal"
-                    data-bs-target="#viewProduct{{ product.id }}"
-                  >
-                    <i class="bi bi-eye me-2"></i> View
-                  </button>
-                </li>
-
-                <li>
-                  <button
-                    type="button"
-                    class="dropdown-item"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editProduct{{ product.id }}"
-                  >
-                    <i class="bi bi-pencil-square me-2"></i> Edit
-                  </button>
-                </li>
-
-                <li>
-                  <a
-                    href="{% url 'delete_product_admin' product.id %}"
-                    class="dropdown-item text-danger delete-product-btn"
-                    data-ajax-action="delete"
-                    data-method="POST"
-                    data-remove-target="tr"
-                    data-confirm="This product will be deleted permanently!"
-                  >
-                    <i class="bi bi-trash me-2"></i> Delete
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </td>
-        </tr>
-
-        <!-- View Product Modal -->
-        <div class="modal fade" id="viewProduct{{ product.id }}" tabindex="-1">
-          <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content admin-view-modal">
-              <div class="modal-header">
-                <h5 class="modal-title">Product Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-
-              <div class="modal-body">
-                <div class="customer-view-header">
-                  {% if product.images.first %}
-                    <img src="{{ product.images.first.image.url }}" class="customer-view-img">
-                  {% else %}
-                    <div class="product-placeholder">
-                      <i class="bi bi-image"></i>
-                    </div>
-                  {% endif %}
-
-                  <div>
-                    <h4>{{ product.product_name }}</h4>
-                    <span class="role-pill">
-                      {{ product.category.category_name|default:"No Category" }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="customer-detail-grid">
-                  <div class="customer-detail-item">
-                    <i class="bi bi-currency-rupee"></i>
-                    <div>
-                      <small>Price</small>
-                      <p>₹{{ product.price }}</p>
-                    </div>
-                  </div>
-
-                  <div class="customer-detail-item">
-                    <i class="bi bi-box"></i>
-                    <div>
-                      <small>Stock</small>
-                      <p>{{ product.stock_quantity|default:0 }}</p>
-                    </div>
-                  </div>
-
-                  <div class="customer-detail-item">
-                    <i class="bi bi-check-circle"></i>
-                    <div>
-                      <small>Status</small>
-                      <p>{% if product.is_active %}Active{% else %}Inactive{% endif %}</p>
-                    </div>
-                  </div>
-
-                  <div class="customer-detail-item">
-                    <i class="bi bi-calendar"></i>
-                    <div>
-                      <small>Created</small>
-                      <p>{{ product.created_at|date:"d M Y" }}</p>
-                    </div>
-                  </div>
-
-                  <div class="customer-detail-item">
-                    <i class="bi bi-card-text"></i>
-                    <div>
-                      <small>Short Description</small>
-                      <p>{{ product.short_description|default:"-" }}</p>
-                    </div>
-                  </div>
-
-                  <div class="customer-detail-item">
-                    <i class="bi bi-list-ul"></i>
-                    <div>
-                      <small>Long Description</small>
-                      <p>{{ product.long_description|default:"-" }}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        <!-- Edit Product Modal -->
-        <div class="modal fade" id="editProduct{{ product.id }}" tabindex="-1">
-          <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content admin-view-modal">
-              <div class="modal-header">
-                <h5 class="modal-title">Edit Product</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-
-              <form
-                method="POST"
-                enctype="multipart/form-data"
-                action="{% url 'edit_product_admin' product.id %}"
-                data-ajax-form
-                data-close-modal="true"
-                data-reset="false"
-              >
-                {% csrf_token %}
-
-                <div class="modal-body">
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <label class="form-label">Product Name</label>
-                      <input
-                        type="text"
-                        name="product_name"
-                        value="{{ product.product_name }}"
-                        class="form-control product-input"
-                        required
-                      >
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Category</label>
-                      <select name="category_id" class="form-select modal-select" required>
-                        {% for category in categories %}
-                          <option value="{{ category.id }}" {% if product.category.id == category.id %}selected{% endif %}>
-                            {{ category.category_name }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Price</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        name="price"
-                        value="{{ product.price }}"
-                        class="form-control product-input"
-                        required
-                      >
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Stock Quantity</label>
-                      <input
-                        type="number"
-                        name="stock_quantity"
-                        value="{{ product.stock_quantity }}"
-                        class="form-control product-input"
-                        required
-                      >
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Status</label>
-                      <select name="is_active" class="form-select modal-select">
-                        <option value="True" {% if product.is_active %}selected{% endif %}>Active</option>
-                        <option value="False" {% if not product.is_active %}selected{% endif %}>Inactive</option>
-                      </select>
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Product Image</label>
-
-                      <div class="image-upload-box">
-                        {% if product.images.first %}
-                          <img
-                            src="{{ product.images.first.image.url }}"
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% else %}
-                          <img
-                            src=""
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% endif %}
-
-                        <input
-                          type="file"
-                          name="product_image"
-                          class="form-control product-input image-input"
-                          accept="image/*"
-                        >
-                      </div>
-
-                      <div class="image-upload-box">
-                        {% if product.images.first %}
-                          <img
-                            src="{{ product.images.first.image.url }}"
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% else %}
-                          <img
-                            src=""
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% endif %}
-
-                        <input
-                          type="file"
-                          name="product_image"
-                          class="form-control product-input image-input"
-                          accept="image/*"
-                        >
-                      </div>
-
-                      <div class="image-upload-box">
-                        {% if product.images.first %}
-                          <img
-                            src="{{ product.images.first.image.url }}"
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% else %}
-                          <img
-                            src=""
-                            class="image-preview"
-                            alt="Product Preview"
-                          >
-                        {% endif %}
-
-                        <input
-                          type="file"
-                          name="product_image"
-                          class="form-control product-input image-input"
-                          accept="image/*"
-                        >
-                      </div>
-                    </div>
-
-                    <div class="col-12">
-                      <label class="form-label">Short Description</label>
-                      <input
-                        type="text"
-                        name="short_description"
-                        value="{{ product.short_description }}"
-                        class="form-control product-input"
-                      >
-                    </div>
-
-                    <div class="col-12">
-                      <label class="form-label">Long Description</label>
-                      <textarea
-                        name="long_description"
-                        rows="4"
-                        class="form-control product-input"
-                      >{{ product.long_description }}</textarea>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    Cancel
-                  </button>
-
-                  <button type="submit" class="product-submit-btn">
-                    <i class="bi bi-check-circle me-2"></i> Update Product
-                  </button>
-                </div>
-              </form>
-
-            </div>
-          </div>
-        </div>
+            </td>
+          </tr>
 
         {% empty %}
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">
-            No products found
-          </td>
-        </tr>
+          <tr>
+            <td
+              colspan="7"
+              class="text-center text-muted py-5"
+            >
+              No products found
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
+{% for product in products %}
+
+  <!-- View Product Modal -->
+  <div
+    class="modal fade"
+    id="viewProduct{{ product.id }}"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content admin-view-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Product Details
+          </h5>
+
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="customer-view-header">
+            {% if product.primary_image_url %}
+              <img
+                src="{{ product.primary_image_url }}"
+                class="customer-view-img"
+                alt="{{ product.product_name }}"
+              >
+            {% else %}
+              <div class="product-placeholder">
+                <i class="bi bi-image"></i>
+              </div>
+            {% endif %}
+
+            <div>
+              <h4>{{ product.product_name }}</h4>
+
+              <span class="role-pill">
+                {{ product.category.category_name|default:"No Category" }}
+              </span>
+            </div>
+          </div>
+
+          <div class="customer-detail-grid">
+            <div class="customer-detail-item">
+              <i class="bi bi-currency-rupee"></i>
+
+              <div>
+                <small>Price</small>
+                <p>₹{{ product.price }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-box"></i>
+
+              <div>
+                <small>Stock</small>
+                <p>{{ product.stock_quantity|default:0 }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-check-circle"></i>
+
+              <div>
+                <small>Status</small>
+
+                <p>
+                  {% if product.is_active %}
+                    Active
+                  {% else %}
+                    Inactive
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-calendar"></i>
+
+              <div>
+                <small>Created</small>
+                <p>{{ product.created_at|date:"d M Y" }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-card-text"></i>
+
+              <div>
+                <small>Short Description</small>
+                <p>{{ product.short_description|default:"-" }}</p>
+              </div>
+            </div>
+
+            <div class="customer-detail-item">
+              <i class="bi bi-list-ul"></i>
+
+              <div>
+                <small>Long Description</small>
+                <p>{{ product.long_description|default:"-" }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Product Modal -->
+  <div
+    class="modal fade"
+    id="editProduct{{ product.id }}"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content admin-view-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Edit Product
+          </h5>
+
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          action="{% url 'edit_product_admin' product.id %}"
+          data-ajax-form
+          data-close-modal="true"
+          data-reset="false"
+        >
+          {% csrf_token %}
+
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">
+                  Product Name
+                </label>
+
+                <input
+                  type="text"
+                  name="product_name"
+                  value="{{ product.product_name }}"
+                  class="form-control product-input"
+                  required
+                >
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  Category
+                </label>
+
+                <select
+                  name="category_id"
+                  class="form-select modal-select"
+                  required
+                >
+                  {% for category in categories %}
+                    <option
+                      value="{{ category.id }}"
+                      {% if product.category_id == category.id %}
+                        selected
+                      {% endif %}
+                    >
+                      {{ category.category_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  Price
+                </label>
+
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="price"
+                  value="{{ product.price }}"
+                  class="form-control product-input"
+                  required
+                >
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  Stock Quantity
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  name="stock_quantity"
+                  value="{{ product.stock_quantity }}"
+                  class="form-control product-input"
+                  required
+                >
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  Status
+                </label>
+
+                <select
+                  name="is_active"
+                  class="form-select modal-select"
+                >
+                  <option
+                    value="True"
+                    {% if product.is_active %}selected{% endif %}
+                  >
+                    Active
+                  </option>
+
+                  <option
+                    value="False"
+                    {% if not product.is_active %}selected{% endif %}
+                  >
+                    Inactive
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  Current Primary Image
+                </label>
+
+                <div class="image-upload-box">
+                  {% if product.primary_image_url %}
+                    <img
+                      src="{{ product.primary_image_url }}"
+                      class="image-preview"
+                      alt="{{ product.product_name }}"
+                    >
+                  {% else %}
+                    <div class="product-placeholder">
+                      <i class="bi bi-image"></i>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">
+                  Replace or Add Product Images
+                </label>
+
+                <p class="text-muted small mb-3">
+                  The first selected image becomes the primary image.
+                  You can select up to three images.
+                </p>
+
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <div class="image-upload-box">
+                      <img
+                        src=""
+                        class="image-preview"
+                        alt="Image 1 Preview"
+                      >
+
+                      <input
+                        type="file"
+                        name="product_images"
+                        class="form-control product-input image-input"
+                        accept="image/*"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="image-upload-box">
+                      <img
+                        src=""
+                        class="image-preview"
+                        alt="Image 2 Preview"
+                      >
+
+                      <input
+                        type="file"
+                        name="product_images"
+                        class="form-control product-input image-input"
+                        accept="image/*"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="image-upload-box">
+                      <img
+                        src=""
+                        class="image-preview"
+                        alt="Image 3 Preview"
+                      >
+
+                      <input
+                        type="file"
+                        name="product_images"
+                        class="form-control product-input image-input"
+                        accept="image/*"
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">
+                  Short Description
+                </label>
+
+                <input
+                  type="text"
+                  name="short_description"
+                  value="{{ product.short_description }}"
+                  class="form-control product-input"
+                >
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">
+                  Long Description
+                </label>
+
+                <textarea
+                  name="long_description"
+                  rows="4"
+                  class="form-control product-input"
+                >{{ product.long_description }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-light"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              class="product-submit-btn"
+            >
+              <i class="bi bi-check-circle me-2"></i>
+              Update Product
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% endfor %}
+
 <!-- Add Product Modal -->
-<div class="modal fade" id="addProductModal" tabindex="-1">
+<div
+  class="modal fade"
+  id="addProductModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content admin-view-modal">
       <div class="modal-header">
-        <h5 class="modal-title">Add New Product</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title">
+          Add New Product
+        </h5>
+
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
 
       <form
@@ -486,117 +640,232 @@
         action="{% url 'add_product' %}"
         data-ajax-form
         data-close-modal="true"
+        data-reset="true"
       >
         {% csrf_token %}
 
         <div class="modal-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Product Name</label>
-              <input type="text" name="product_name" class="form-control product-input" required>
+              <label class="form-label">
+                Product Name
+              </label>
+
+              <input
+                type="text"
+                name="product_name"
+                class="form-control product-input"
+                required
+              >
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Category</label>
-              <select name="category_id" class="form-select modal-select" required>
-                <option value="">Select Category</option>
+              <label class="form-label">
+                Category
+              </label>
+
+              <select
+                name="category_id"
+                class="form-select modal-select"
+                required
+              >
+                <option value="">
+                  Select Category
+                </option>
+
                 {% for category in categories %}
-                  <option value="{{ category.id }}">{{ category.category_name }}</option>
+                  <option value="{{ category.id }}">
+                    {{ category.category_name }}
+                  </option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Price</label>
-              <input type="number" step="0.01" name="price" class="form-control product-input" required>
+              <label class="form-label">
+                Price
+              </label>
+
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="price"
+                class="form-control product-input"
+                required
+              >
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Stock Quantity</label>
-              <input type="number" name="stock_quantity" class="form-control product-input" required>
+              <label class="form-label">
+                Stock Quantity
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                name="stock_quantity"
+                class="form-control product-input"
+                required
+              >
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Product Image</label>
+              <label class="form-label">
+                Status
+              </label>
 
-              <div class="image-upload-box">
-                <img src="" class="image-preview" alt="Product Preview">
+              <select
+                name="is_active"
+                class="form-select modal-select"
+              >
+                <option value="True">
+                  Active
+                </option>
 
-                <input
-                  type="file"
-                  name="product_image"
-                  class="form-control product-input image-input"
-                  accept="image/*"
-                >
-              </div>
-              <div class="image-upload-box">
-                <img src="" class="image-preview" alt="Product Preview">
-
-                <input
-                  type="file"
-                  name="product_image"
-                  class="form-control product-input image-input"
-                  accept="image/*"
-                >
-              </div>
-              <div class="image-upload-box">
-                <img src="" class="image-preview" alt="Product Preview">
-
-                <input
-                  type="file"
-                  name="product_image"
-                  class="form-control product-input image-input"
-                  accept="image/*"
-                >
-              </div>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Status</label>
-              <select name="is_active" class="form-select modal-select">
-                <option value="True">Active</option>
-                <option value="False">Inactive</option>
+                <option value="False">
+                  Inactive
+                </option>
               </select>
             </div>
 
             <div class="col-12">
-              <label class="form-label">Short Description</label>
-              <input type="text" name="short_description" class="form-control product-input">
+              <label class="form-label">
+                Product Images
+              </label>
+
+              <p class="text-muted small mb-3">
+                The first selected image becomes the primary image.
+              </p>
+
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="image-upload-box">
+                    <img
+                      src=""
+                      class="image-preview"
+                      alt="Image 1 Preview"
+                    >
+
+                    <input
+                      type="file"
+                      name="product_images"
+                      class="form-control product-input image-input"
+                      accept="image/*"
+                      required
+                    >
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="image-upload-box">
+                    <img
+                      src=""
+                      class="image-preview"
+                      alt="Image 2 Preview"
+                    >
+
+                    <input
+                      type="file"
+                      name="product_images"
+                      class="form-control product-input image-input"
+                      accept="image/*"
+                    >
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="image-upload-box">
+                    <img
+                      src=""
+                      class="image-preview"
+                      alt="Image 3 Preview"
+                    >
+
+                    <input
+                      type="file"
+                      name="product_images"
+                      class="form-control product-input image-input"
+                      accept="image/*"
+                    >
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="col-12">
-              <label class="form-label">Long Description</label>
-              <textarea name="long_description" rows="4" class="form-control product-input"></textarea>
+              <label class="form-label">
+                Short Description
+              </label>
+
+              <input
+                type="text"
+                name="short_description"
+                class="form-control product-input"
+              >
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">
+                Long Description
+              </label>
+
+              <textarea
+                name="long_description"
+                rows="4"
+                class="form-control product-input"
+              ></textarea>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+          <button
+            type="button"
+            class="btn btn-light"
+            data-bs-dismiss="modal"
+          >
             Cancel
           </button>
 
-          <button type="submit" class="product-submit-btn">
-            <i class="bi bi-plus-circle me-2"></i> Save Product
+          <button
+            type="submit"
+            class="product-submit-btn"
+          >
+            <i class="bi bi-plus-circle me-2"></i>
+            Save Product
           </button>
         </div>
       </form>
-
     </div>
   </div>
 </div>
 
 <!-- Bulk Import Modal -->
-<div class="modal fade" id="bulkImportModal" tabindex="-1">
+<div
+  class="modal fade"
+  id="bulkImportModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content rounded-4 border-0">
       <div class="modal-header border-0 pb-0">
         <div>
-          <h3 class="fw-bold mb-1">Bulk Import Products</h3>
-          <p class="text-muted mb-0">Upload Excel file and import products quickly.</p>
+          <h3 class="fw-bold mb-1">
+            Bulk Import Products
+          </h3>
+
+          <p class="text-muted mb-0">
+            Upload an Excel file and import products quickly.
+          </p>
         </div>
 
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
 
       <form
@@ -612,7 +881,9 @@
         <div class="modal-body p-4">
           <div class="card border-0 bg-light rounded-4 mb-4">
             <div class="card-body">
-              <label class="form-label fw-semibold">Upload Excel File</label>
+              <label class="form-label fw-semibold">
+                Upload Excel File
+              </label>
 
               <input
                 type="file"
@@ -622,15 +893,21 @@
                 required
               >
 
-              <button type="submit" class="btn btn-primary rounded-pill px-4">
-                <i class="bi bi-upload me-2"></i> Import Products
+              <button
+                type="submit"
+                class="btn btn-primary rounded-pill px-4"
+              >
+                <i class="bi bi-upload me-2"></i>
+                Import Products
               </button>
             </div>
           </div>
 
           <div class="card border-0 bg-light rounded-4">
             <div class="card-body">
-              <h5 class="fw-bold mb-3">Required Excel Format</h5>
+              <h5 class="fw-bold mb-3">
+                Required Excel Format
+              </h5>
 
               <div class="table-responsive">
                 <table class="table table-bordered align-middle text-center">
@@ -646,23 +923,20 @@
                       <th>Image1</th>
                       <th>Image2</th>
                       <th>Image3</th>
-                 
                     </tr>
                   </thead>
                 </table>
               </div>
 
               <p class="text-muted mb-0">
-                Put all image files inside
-                <b>media/products/</b>
-                and write only image names like
-                <b>shoe1_1.jpg</b>.
+                For deployed Cloudinary uploads, use the Add Product
+                or Edit Product forms. Local bulk-import image paths
+                are not permanent on Render’s free service.
               </p>
             </div>
           </div>
         </div>
       </form>
-
     </div>
   </div>
 </div>

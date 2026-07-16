@@ -222,6 +222,36 @@ class Product(models.Model):
         null=True,
         blank=True
     )
+    @property
+    def primary_image(self):
+        primary = (
+            self.images
+            .filter(is_primary=True)
+            .order_by("-created_at")
+            .first()
+        )
+    
+        if primary:
+            return primary
+    
+        return (
+            self.images
+            .order_by("-created_at")
+            .first()
+        )
+    
+    
+    @property
+    def primary_image_url(self):
+        product_image = self.primary_image
+    
+        if not product_image or not product_image.image:
+            return ""
+    
+        try:
+            return product_image.image.url
+        except (ValueError, AttributeError):
+            return ""
 
     def get_active_deals(self):
         """
@@ -588,6 +618,7 @@ class Deal(models.Model):
 # ==================================
 # PRODUCT IMAGES
 # ==================================
+
 class ProductImage(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -612,6 +643,12 @@ class ProductImage(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True
     )
+
+    class Meta:
+        ordering = [
+            "-is_primary",
+            "-created_at",
+        ]
 
     def __str__(self):
         return self.product.product_name

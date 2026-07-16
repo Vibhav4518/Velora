@@ -8,113 +8,117 @@
   data-product-price="{{ card_product.current_price|default:card_product.price }}"
 >
 
-  <!-- ================================================= -->
-  <!-- PRODUCT IMAGE -->
-  <!-- ================================================= -->
+<!-- ================================================= -->
+<!-- PRODUCT IMAGE -->
+<!-- ================================================= -->
 
-  <div class="velora-unified-product-media">
+<div class="velora-unified-product-media">
 
-    <a
-      href="{% url 'product_details' card_product.id %}"
-      class="velora-unified-product-image-link"
-    >
+  <a
+    href="{% url 'product_details' card_product.id %}"
+    class="velora-unified-product-image-link"
+  >
 
-      {% if card_product.images.first %}
+    {% if card_product.primary_image_url %}
 
-        <img
-          src="{{ card_product.images.first.image.url }}"
-          alt="{{ card_product.product_name }}"
-          loading="lazy"
-        >
+      <img
+        src="{{ card_product.primary_image_url }}"
+        alt="{{ card_product.product_name }}"
+        loading="lazy"
+      >
+
+    {% else %}
+
+      <div class="velora-unified-product-placeholder">
+
+        <i class="bi bi-image"></i>
+
+      </div>
+
+    {% endif %}
+
+  </a>
+
+
+  <!-- Deal badge -->
+
+  {% if card_product.has_active_deal %}
+
+    <span class="velora-unified-deal-badge">
+
+      {% if card_product.discount_percentage %}
+
+        {{ card_product.discount_percentage|floatformat:0 }}% OFF
 
       {% else %}
 
-        <div class="velora-unified-product-placeholder">
-
-          <i class="bi bi-image"></i>
-
-        </div>
+        Deal
 
       {% endif %}
+
+    </span>
+
+  {% endif %}
+
+
+  <!-- Stock badge -->
+
+  {% if card_product.stock_quantity <= 0 %}
+
+    <span class="velora-unified-stock-badge out">
+
+      Out of Stock
+
+    </span>
+
+  {% elif card_product.stock_quantity <= 5 %}
+
+    <span class="velora-unified-stock-badge low">
+
+      Only {{ card_product.stock_quantity }} left
+
+    </span>
+
+  {% endif %}
+
+
+  <!-- Image actions -->
+
+  <div class="velora-unified-card-actions">
+
+    <a
+      href="{% url 'product_details' card_product.id %}"
+      class="velora-unified-icon-btn"
+      aria-label="View {{ card_product.product_name }}"
+    >
+
+      <i class="bi bi-search"></i>
 
     </a>
 
 
-    <!-- Deal badge -->
+    <button
+      type="button"
+      class="velora-unified-icon-btn wishlist-btn"
+      data-url="{% url 'add_to_wishlist' card_product.id %}"
+      aria-label="Add {{ card_product.product_name }} to wishlist"
+    >
 
-    {% if card_product.has_active_deal %}
+      {% if card_product.id in wishlist_product_ids %}
 
-      <span class="velora-unified-deal-badge">
+        <i class="bi bi-heart-fill text-danger"></i>
 
-        {% if card_product.discount_percentage %}
+      {% else %}
 
-          {{ card_product.discount_percentage|floatformat:0 }}% OFF
+        <i class="bi bi-heart"></i>
 
-        {% else %}
+      {% endif %}
 
-          Deal
-
-        {% endif %}
-
-      </span>
-
-    {% endif %}
-
-
-    <!-- Stock badge -->
-
-    {% if card_product.stock_quantity <= 0 %}
-
-      <span class="velora-unified-stock-badge out">
-        Out of Stock
-      </span>
-
-    {% elif card_product.stock_quantity <= 5 %}
-
-      <span class="velora-unified-stock-badge low">
-
-        Only {{ card_product.stock_quantity }} left
-
-      </span>
-
-    {% endif %}
-
-
-    <!-- Image actions -->
-
-    <div class="velora-unified-card-actions">
-
-      <a
-        href="{% url 'product_details' card_product.id %}"
-        class="velora-unified-icon-btn"
-        aria-label="View {{ card_product.product_name }}"
-      >
-        <i class="bi bi-search"></i>
-      </a>
-
-
-      <button
-        type="button"
-        class="velora-unified-icon-btn wishlist-btn"
-        data-url="{% url 'add_to_wishlist' card_product.id %}"
-        aria-label="Add {{ card_product.product_name }} to wishlist"
-      >
-
-        {% if card_product.id in wishlist_product_ids %}
-
-          <i class="bi bi-heart-fill text-danger"></i>
-
-        {% else %}
-
-          <i class="bi bi-heart"></i>
-
-        {% endif %}
-
-      </button>
-
-    </div>
+    </button>
 
   </div>
+
+</div>
 
 
   <!-- ================================================= -->
