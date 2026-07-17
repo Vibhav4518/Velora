@@ -849,15 +849,16 @@
   aria-hidden="true"
 >
   <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content rounded-4 border-0">
-      <div class="modal-header border-0 pb-0">
+    <div class="modal-content admin-view-modal">
+
+      <div class="modal-header">
         <div>
-          <h3 class="fw-bold mb-1">
+          <h4 class="modal-title mb-1">
             Bulk Import Products
-          </h3>
+          </h4>
 
           <p class="text-muted mb-0">
-            Upload an Excel file and import products quickly.
+            Upload one Excel file and one ZIP containing product images.
           </p>
         </div>
 
@@ -878,65 +879,133 @@
       >
         {% csrf_token %}
 
-        <div class="modal-body p-4">
-          <div class="card border-0 bg-light rounded-4 mb-4">
-            <div class="card-body">
-              <label class="form-label fw-semibold">
-                Upload Excel File
-              </label>
+        <div class="modal-body">
 
-              <input
-                type="file"
-                name="excel_file"
-                accept=".xlsx"
-                class="form-control mb-3"
-                required
-              >
+          <div class="row g-4">
 
-              <button
-                type="submit"
-                class="btn btn-primary rounded-pill px-4"
-              >
-                <i class="bi bi-upload me-2"></i>
-                Import Products
-              </button>
-            </div>
-          </div>
+            <div class="col-lg-6">
+              <div class="bulk-upload-card">
 
-          <div class="card border-0 bg-light rounded-4">
-            <div class="card-body">
-              <h5 class="fw-bold mb-3">
-                Required Excel Format
-              </h5>
+                <div class="bulk-upload-icon">
+                  <i class="bi bi-file-earmark-excel"></i>
+                </div>
 
-              <div class="table-responsive">
-                <table class="table table-bordered align-middle text-center">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Category</th>
-                      <th>Product Name</th>
-                      <th>Price</th>
-                      <th>Offer Price</th>
-                      <th>Stock</th>
-                      <th>Short Description</th>
-                      <th>Description</th>
-                      <th>Image1</th>
-                      <th>Image2</th>
-                      <th>Image3</th>
-                    </tr>
-                  </thead>
-                </table>
+                <h5>Products Excel File</h5>
+
+                <p>
+                  Upload an XLSX file containing product
+                  details and image filenames.
+                </p>
+
+                <input
+                  type="file"
+                  name="excel_file"
+                  class="form-control"
+                  accept=".xlsx"
+                  required
+                >
+
               </div>
-
-              <p class="text-muted mb-0">
-                For deployed Cloudinary uploads, use the Add Product
-                or Edit Product forms. Local bulk-import image paths
-                are not permanent on Render’s free service.
-              </p>
             </div>
+
+            <div class="col-lg-6">
+              <div class="bulk-upload-card">
+
+                <div class="bulk-upload-icon">
+                  <i class="bi bi-file-earmark-zip"></i>
+                </div>
+
+                <h5>Product Images ZIP</h5>
+
+                <p>
+                  Upload a ZIP containing all images referenced
+                  in Image1, Image2, and Image3.
+                </p>
+
+                <input
+                  type="file"
+                  name="images_zip"
+                  class="form-control"
+                  accept=".zip,application/zip"
+                  required
+                >
+
+              </div>
+            </div>
+
           </div>
+
+          <div class="bulk-format-box mt-4">
+
+            <h5>
+              Required Excel columns
+            </h5>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-bordered align-middle">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Product Name</th>
+                    <th>Price</th>
+                    <th>Offer Price</th>
+                    <th>Stock</th>
+                    <th>Short Description</th>
+                    <th>Description</th>
+                    <th>Image1</th>
+                    <th>Image2</th>
+                    <th>Image3</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr>
+                    <td>Shirts</td>
+                    <td>Blue Cotton Shirt</td>
+                    <td>1299</td>
+                    <td>999</td>
+                    <td>20</td>
+                    <td>Premium cotton shirt</td>
+                    <td>Full product description</td>
+                    <td>blue-shirt-1.jpg</td>
+                    <td>blue-shirt-2.jpg</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+
+              Image names in Excel must exactly match image
+              filenames inside the ZIP file.
+            </div>
+
+          </div>
+
         </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-light"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="product-submit-btn"
+          >
+            <i class="bi bi-cloud-upload me-2"></i>
+            Import Products
+          </button>
+        </div>
+
       </form>
+
     </div>
   </div>
 </div>

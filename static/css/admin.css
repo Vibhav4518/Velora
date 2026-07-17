@@ -1599,3 +1599,40 @@
 .order-items-table th {
   vertical-align: middle;
 }
+.bulk-upload-card {
+  height: 100%;
+  padding: 24px;
+  border: 1px solid var(--admin-border, #26354d);
+  border-radius: 18px;
+  background: var(--admin-card-bg, #111b2d);
+}
+
+.bulk-upload-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.14);
+  color: var(--primary, #2563eb);
+  font-size: 24px;
+}
+
+.bulk-upload-card h5 {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.bulk-upload-card p {
+  min-height: 48px;
+  margin-bottom: 18px;
+  color: var(--admin-muted, #94a3b8);
+}
+
+.bulk-format-box {
+  padding: 22px;
+  border: 1px solid var(--admin-border, #26354d);
+  border-radius: 18px;
+  background: var(--admin-card-bg, #111b2d);
+}

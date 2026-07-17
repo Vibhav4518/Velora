@@ -119,7 +119,6 @@ urlpatterns = [
     
     path("admin/products/", views.admin_products, name="admin_products"),
     path("admin/product/add/", views.add_product, name="add_product"),
-    path("admin/import-products/", views.import_products, name="import_products"),
     path("admin/category/add/", views.add_category, name="add_category"),
     path("admin/category/list/", views.category_list, name="category_list"),
     path("admin/products/edit/<uuid:id>/", views.edit_product_admin, name="edit_product_admin"),
@@ -282,6 +281,11 @@ path(
     "blog/<slug:slug>/",
     views.blog_details,
     name="blog_details",
+),
+path(
+    "admin/products/import/",
+    views.import_products,
+    name="import_products"
 ),
 
 ]

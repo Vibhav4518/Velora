@@ -124,6 +124,8 @@ function escapeAttr(value) {
     .replaceAll("'", "&#039;");
 }
 
+
+
 /* =========================
    MAIN INIT
 ========================= */
@@ -357,6 +359,8 @@ function initWishlistButtons() {
 /* =========================================================
    PUBLIC BLOG DETAILS POPUP
 ========================================================= */
+
+
 
 function initPublicBlogPopup() {
   const modalElement =
