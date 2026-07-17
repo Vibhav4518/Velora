@@ -8697,3 +8697,100 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 });
+
+function initAjaxForms() {
+  document.querySelectorAll("form[data-ajax-form]").forEach((form) => {
+    if (form.dataset.ajaxBound === "true") {
+      return;
+    }
+
+    form.dataset.ajaxBound = "true";
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const submitButton = form.querySelector(
+        'button[type="submit"]'
+      );
+
+      const originalButtonContent = submitButton
+        ? submitButton.innerHTML
+        : "";
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML = `
+          <span
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          Processing...
+        `;
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: form.method || "POST",
+          body: new FormData(form),
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          credentials: "same-origin",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+          throw new Error(
+            data.message || "Unable to process the request."
+          );
+        }
+
+        const modalElement = form.closest(".modal");
+
+        if (
+          modalElement &&
+          form.dataset.closeModal === "true"
+        ) {
+          const modal =
+            bootstrap.Modal.getInstance(modalElement) ||
+            bootstrap.Modal.getOrCreateInstance(modalElement);
+
+          modal.hide();
+        }
+
+        if (form.dataset.reset === "true") {
+          form.reset();
+        }
+
+        await Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: data.message || "Saved successfully.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        if (data.reload_required) {
+          window.location.href = window.location.href;
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message || "Something went wrong.",
+        });
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonContent;
+        }
+      }
+    });
+  });
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  initAjaxForms
+);
