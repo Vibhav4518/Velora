@@ -1,79 +1,75 @@
+import logging
+import traceback
+import uuid
+import zipfile
 
-from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_POST
-from django.http import JsonResponse , HttpResponse
-from django.db.models import Sum, Q, Count, F, Avg
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+
+from cloudinary_storage.storage import MediaCloudinaryStorage
+from openpyxl import load_workbook
+from reportlab.pdfgen import canvas
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.files import File
+from django.core.files.storage import default_storage
+from django.db import transaction
+from django.db.models import Avg, Count, F, Q, Sum
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
-from .decorators import role_permission_required, has_role_permission
+from django.utils import timezone
+from django.utils.text import get_valid_filename
+from django.views.decorators.http import require_POST
+
+from .decorators import (
+    has_role_permission,
+    role_permission_required,
+)
+
+from .forms import (
+    BlogCategoryForm,
+    BlogPostForm,
+    ContactMessageForm,
+    DealForm,
+    ProductReviewForm,
+    ProfileForm,
+    UserAddressForm,
+)
+
 from .models import (
+    BlogCategory,
+    BlogPost,
     Cart,
-    Role,
-    Permission,
-    User,
+    CartItem,
     Category,
+    ContactMessage,
+    Deal,
+    Order,
+    OrderItem,
+    Permission,
     Product,
     ProductImage,
     ProductReview,
-    CartItem,
-    Order,
-    OrderItem,
-    Wishlist,
+    Role,
+    User,
     UserAddress,
-    Deal,
-    BlogCategory,
-    BlogPost,
-    ContactMessage,
+    Wishlist,
 )
 
-from .forms import ProfileForm, UserAddressForm, DealForm, BlogCategoryForm, BlogPostForm,ContactMessageForm,ProductReviewForm
 
-#-----------------------------------------
-from openpyxl import load_workbook
-from django.conf import settings
-from django.core.files import File
-from pathlib import Path
-from reportlab.pdfgen import canvas
-from decimal import Decimal
-from django.utils import timezone
-
-import uuid
-from django.core.files import File
-
-
-from django.core.files.storage import default_storage
-from django.utils.text import get_valid_filename
-
-from cloudinary_storage.storage import MediaCloudinaryStorage
-
-import zipfile
-from decimal import Decimal, InvalidOperation
-
-from django.core.files.base import ContentFile
-from django.db import transaction
-
-from openpyxl import load_workbook
-
-# ==========================================================
-# COMMON ADMIN QUERY HELPERS
-# ==========================================================
-# ==========================================================
-# REUSABLE PRODUCT CARD QUERYSET
-# ==========================================================
+logger = logging.getLogger(__name__)
 
 # ==========================================================
 # PRODUCT IMAGE STORAGE HELPERS
 # ==========================================================
 
-def get_product_image_storage():
-    """
-    Use Cloudinary when its credentials are available.
-    Otherwise use local media storage during development.
-    """
 
+def get_product_image_storage():
     if getattr(settings, "USE_CLOUDINARY", False):
         return MediaCloudinaryStorage()
 
@@ -81,13 +77,6 @@ def get_product_image_storage():
 
 
 def save_product_uploaded_image(uploaded_file):
-    """
-    Save the physical file first.
-
-    Returns the saved storage name only after the storage
-    backend accepts the upload.
-    """
-
     if not uploaded_file:
         raise ValueError("No image file was received.")
 
@@ -97,40 +86,17 @@ def save_product_uploaded_image(uploaded_file):
         uploaded_file.name
     )
 
-    unique_name = (
-        f"products/"
-        f"{uuid.uuid4().hex}_"
-        f"{original_name}"
-    )
-
-    saved_name = storage.save(
-        unique_name,
-        uploaded_file
-    )
-
-    if not saved_name:
+    if not original_name:
         raise ValueError(
-            "The image storage did not return a saved filename."
+            "The uploaded image has an invalid filename."
         )
 
-    return saved_name
+    extension = Path(original_name).suffix.lower()
 
-def get_product_image_storage():
-    if getattr(settings, "USE_CLOUDINARY", False):
-        return MediaCloudinaryStorage()
-
-    return default_storage
-
-
-def save_product_uploaded_image(uploaded_file):
-    if not uploaded_file:
-        raise ValueError("No image file was received.")
-
-    storage = get_product_image_storage()
-
-    original_name = get_valid_filename(
-        uploaded_file.name
-    )
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError(
+            "Only JPG, JPEG, PNG and WebP images are allowed."
+        )
 
     unique_name = (
         f"products/"
@@ -247,6 +213,258 @@ def get_admin_permissions_context(user):
         "can_manage_payments": has_role_permission(user, "Can Manage Payments"),
         "can_manage_blog": has_role_permission(user,"Can Manage Blog"),
     }
+    
+# ==========================================================
+# BULK PRODUCT IMPORT SETTINGS
+# ==========================================================
+
+ALLOWED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+}
+
+# Keep batches small on Render Free.
+MAX_BULK_PRODUCTS = 5
+
+# Maximum Excel size: 2 MB.
+MAX_EXCEL_SIZE = 2 * 1024 * 1024
+
+# Maximum ZIP size: 10 MB.
+MAX_ZIP_SIZE = 10 * 1024 * 1024
+
+
+# ==========================================================
+# BULK PRODUCT IMPORT HELPERS
+# ==========================================================
+
+def clean_excel_value(value):
+    """
+    Convert an Excel cell value to cleaned text.
+    """
+
+    if value is None:
+        return ""
+
+    return str(value).strip()
+
+
+def normalize_image_filename(filename):
+    """
+    Return only the base filename.
+
+    Examples:
+
+    images/shirt.jpg -> shirt.jpg
+    products\\shoe.png -> shoe.png
+    """
+
+    filename = clean_excel_value(
+        filename
+    )
+
+    if not filename:
+        return ""
+
+    normalized_path = filename.replace(
+        "\\",
+        "/"
+    )
+
+    return normalized_path.split("/")[-1]
+
+
+def build_zip_image_map(images_archive):
+    """
+    Create a case-insensitive image lookup.
+
+    Example result:
+
+    {
+        "shirt.jpg": "images/shirt.jpg",
+        "shoe.png": "shoe.png",
+    }
+    """
+
+    image_map = {}
+
+    for zip_name in images_archive.namelist():
+        if zip_name.endswith("/"):
+            continue
+
+        normalized_name = normalize_image_filename(
+            zip_name
+        )
+
+        extension = Path(
+            normalized_name
+        ).suffix.lower()
+
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            continue
+
+        image_map[
+            normalized_name.lower()
+        ] = zip_name
+
+    return image_map
+
+
+def upload_zip_product_image(
+    images_archive,
+    zip_image_map,
+    image_filename,
+):
+    """
+    Open one image directly from the ZIP and stream it to
+    Cloudinary without reading the complete ZIP into memory.
+    """
+
+    normalized_name = normalize_image_filename(
+        image_filename
+    )
+
+    if not normalized_name:
+        raise ValueError(
+            "The image filename is empty."
+        )
+
+    zip_entry = zip_image_map.get(
+        normalized_name.lower()
+    )
+
+    if not zip_entry:
+        raise ValueError(
+            f"Image '{normalized_name}' was not found "
+            "inside the ZIP file."
+        )
+
+    extension = Path(
+        normalized_name
+    ).suffix.lower()
+
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError(
+            f"Image '{normalized_name}' has an "
+            "unsupported file format."
+        )
+
+    with images_archive.open(
+        zip_entry,
+        mode="r",
+    ) as image_stream:
+        uploaded_file = File(
+            image_stream,
+            name=normalized_name,
+        )
+
+        return save_product_uploaded_image(
+            uploaded_file
+        )
+
+
+def parse_decimal(
+    value,
+    field_name,
+    required=False,
+):
+    """
+    Convert an Excel price cell to Decimal.
+    """
+
+    cleaned_value = clean_excel_value(
+        value
+    )
+
+    if not cleaned_value:
+        if required:
+            raise ValueError(
+                f"{field_name} is required."
+            )
+
+        return None
+
+    try:
+        number = Decimal(
+            cleaned_value
+        )
+
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise ValueError(
+            f"Invalid {field_name}: "
+            f"{cleaned_value}"
+        ) from error
+
+    if number < 0:
+        raise ValueError(
+            f"{field_name} cannot be negative."
+        )
+
+    return number
+
+
+def parse_stock(value):
+    """
+    Convert an Excel stock cell to a non-negative integer.
+    """
+
+    cleaned_value = clean_excel_value(
+        value
+    )
+
+    if not cleaned_value:
+        return 0
+
+    try:
+        stock = int(
+            float(cleaned_value)
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ) as error:
+        raise ValueError(
+            f"Invalid stock value: "
+            f"{cleaned_value}"
+        ) from error
+
+    if stock < 0:
+        raise ValueError(
+            "Stock cannot be negative."
+        )
+
+    return stock
+
+
+def delete_saved_storage_files(
+    saved_names
+):
+    """
+    Remove Cloudinary/local files created during a failed row.
+    """
+
+    storage = get_product_image_storage()
+
+    for saved_name in saved_names:
+        if not saved_name:
+            continue
+
+        try:
+            storage.delete(
+                saved_name
+            )
+
+        except Exception:
+            logger.exception(
+                "Could not delete failed image upload: %s",
+                saved_name,
+            )
 
 # ==========================================================
 # PRODUCT REVIEW HELPERS
@@ -2220,7 +2438,7 @@ def blog_page(request):
     popular_posts = (
         posts
         .order_by(
-            "-views",
+            "-views_count",
             "-published_at",
         )[:5]
     )
@@ -2967,155 +3185,6 @@ def create_default_permissions_roles():
     ])
     
 # ==========================================================
-# BULK PRODUCT IMPORT HELPERS
-# ==========================================================
-
-ALLOWED_IMAGE_EXTENSIONS = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-}
-
-
-def clean_excel_value(value):
-    if value is None:
-        return ""
-
-    return str(value).strip()
-
-
-def normalize_image_filename(filename):
-    """
-    Extract only the base filename.
-
-    This allows ZIP entries such as:
-    images/product.jpg
-
-    to match Excel value:
-    product.jpg
-    """
-
-    filename = clean_excel_value(filename)
-
-    if not filename:
-        return ""
-
-    return filename.replace("\\", "/").split("/")[-1]
-
-
-def build_zip_image_map(zip_file):
-    """
-    Create a case-insensitive map:
-
-    filename.jpg -> actual/path/in/archive/filename.jpg
-    """
-
-    image_map = {}
-
-    for zip_name in zip_file.namelist():
-        if zip_name.endswith("/"):
-            continue
-
-        normalized_name = normalize_image_filename(
-            zip_name
-        )
-
-        extension = (
-            "." + normalized_name.rsplit(".", 1)[-1].lower()
-            if "." in normalized_name
-            else ""
-        )
-
-        if extension not in ALLOWED_IMAGE_EXTENSIONS:
-            continue
-
-        image_map[normalized_name.lower()] = zip_name
-
-    return image_map
-
-
-
-
-def upload_zip_product_image(
-    zip_file,
-    zip_image_map,
-    image_filename
-):
-    normalized_name = normalize_image_filename(
-        image_filename
-    )
-
-    if not normalized_name:
-        return None
-
-    zip_entry = zip_image_map.get(
-        normalized_name.lower()
-    )
-
-    if not zip_entry:
-        raise ValueError(
-            f"Image '{normalized_name}' was not found "
-            "inside the ZIP file."
-        )
-
-    with zip_file.open(zip_entry, "r") as image_stream:
-        uploaded_file = File(
-            image_stream,
-            name=normalized_name
-        )
-
-        return save_product_uploaded_image(
-            uploaded_file
-        )
-
-def parse_decimal(value, field_name, required=False):
-    cleaned_value = clean_excel_value(value)
-
-    if not cleaned_value:
-        if required:
-            raise ValueError(
-                f"{field_name} is required."
-            )
-
-        return None
-
-    try:
-        number = Decimal(cleaned_value)
-    except InvalidOperation as error:
-        raise ValueError(
-            f"Invalid {field_name}: {cleaned_value}"
-        ) from error
-
-    if number < 0:
-        raise ValueError(
-            f"{field_name} cannot be negative."
-        )
-
-    return number
-
-
-def parse_stock(value):
-    cleaned_value = clean_excel_value(value)
-
-    if not cleaned_value:
-        return 0
-
-    try:
-        stock = int(float(cleaned_value))
-    except (TypeError, ValueError) as error:
-        raise ValueError(
-            f"Invalid stock value: {cleaned_value}"
-        ) from error
-
-    if stock < 0:
-        raise ValueError(
-            "Stock cannot be negative."
-        )
-
-    return stock
-
-# ==========================================================
 # ADMIN ROLE MANAGEMENT
 # ==========================================================
 
@@ -3232,7 +3301,7 @@ def admin_role_permission(request, role_id):
     )
 
     permissions = Permission.objects.all().order_by(
-        "name"
+        "permission_name"
     )
 
     if request.method == "POST":
@@ -4537,62 +4606,30 @@ def delete_customer(request, id):
 
 #-------------------------------------------------------------------
 
-def clean_cell(value):
-    if value is None:
-        return ""
-    return str(value).strip()
 
 
-def create_product_image(product, image_name, missing_images, primary=False):
-    image_name = clean_cell(image_name)
-
-    if not image_name:
-        return
-
-    image_path = Path(settings.MEDIA_ROOT) / "products" / image_name
-
-    if not image_path.exists():
-        missing_images.append(image_name)
-        return
-
-    with open(image_path, "rb") as img:
-        ProductImage.objects.create(
-            product=product,
-            image=File(img, name=f"products/{image_name}"),
-            is_primary=primary
-        )
         
-MAX_BULK_PRODUCTS = 10
-MAX_ZIP_SIZE = 20 * 1024 * 1024
-MAX_EXCEL_SIZE = 2 * 1024 * 1024
+# ==========================================================
+# BULK PRODUCT IMPORT PROCESSOR
+# ==========================================================
 
-@login_required
-@role_permission_required("Can Manage Products")
-def import_products(request):
-    
-    
-    if excel_file.size > MAX_EXCEL_SIZE:
-        return JsonResponse({
-            "success": False,
-            "message": (
-                "Excel file is too large. "
-                "Maximum allowed size is 2 MB."
-            ),
-        }, status=400)
-    
-    if images_zip.size > MAX_ZIP_SIZE:
-        return JsonResponse({
-            "success": False,
-            "message": (
-                "Images ZIP is too large. "
-                "Maximum allowed size is 20 MB."
-            ),
-        }, status=400)
-    if request.method != "POST":
-        return JsonResponse({
-            "success": False,
-            "message": "POST request required.",
-        }, status=405)
+def process_product_bulk_import(request):
+    """
+    Process one Excel file and one ZIP of product images.
+
+    Excel columns, in this exact order:
+
+    1. Category
+    2. Product Name
+    3. Price
+    4. Offer Price
+    5. Stock
+    6. Short Description
+    7. Description
+    8. Image1
+    9. Image2
+    10. Image3
+    """
 
     excel_file = request.FILES.get(
         "excel_file"
@@ -4602,116 +4639,234 @@ def import_products(request):
         "images_zip"
     )
 
+    # ======================================================
+    # REQUIRED FILES
+    # ======================================================
+
     if not excel_file:
-        return JsonResponse({
-            "success": False,
-            "message": "Please select an Excel file.",
-        }, status=400)
-        
-    product_row_count = max(
-        worksheet.max_row - 1,
-        0
-    )
-    
-    if product_row_count > MAX_BULK_PRODUCTS:
-        images_archive.close()
-    
-        return JsonResponse({
-            "success": False,
-            "message": (
-                f"Import a maximum of "
-                f"{MAX_BULK_PRODUCTS} products at once."
-            ),
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "Please select an Excel file."
+                ),
+            },
+            status=400,
+        )
 
     if not images_zip:
-        return JsonResponse({
-            "success": False,
-            "message": "Please select an images ZIP file.",
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "Please select an images ZIP file."
+                ),
+            },
+            status=400,
+        )
+
+    # ======================================================
+    # FILE EXTENSIONS
+    # ======================================================
 
     if not excel_file.name.lower().endswith(
         ".xlsx"
     ):
-        return JsonResponse({
-            "success": False,
-            "message": "Only .xlsx Excel files are supported.",
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "Only XLSX Excel files are supported."
+                ),
+            },
+            status=400,
+        )
 
     if not images_zip.name.lower().endswith(
         ".zip"
     ):
-        return JsonResponse({
-            "success": False,
-            "message": "The image file must be a ZIP file.",
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "Product images must be provided "
+                    "inside a ZIP file."
+                ),
+            },
+            status=400,
+        )
+
+    # ======================================================
+    # FILE SIZES
+    # ======================================================
+
+    if excel_file.size > MAX_EXCEL_SIZE:
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "The Excel file is too large. "
+                    "Maximum size is 2 MB."
+                ),
+            },
+            status=400,
+        )
+
+    if images_zip.size > MAX_ZIP_SIZE:
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "The images ZIP is too large. "
+                    "Maximum size is 10 MB."
+                ),
+            },
+            status=400,
+        )
+
+    workbook = None
+    images_archive = None
 
     try:
-        workbook = load_workbook(
-            filename=excel_file,
-            data_only=True
-        )
+        # ==================================================
+        # OPEN EXCEL
+        # ==================================================
+
+        try:
+            workbook = load_workbook(
+                filename=excel_file,
+                data_only=True,
+                read_only=True,
+            )
+
+        except Exception as error:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        "Unable to read the Excel file: "
+                        f"{error}"
+                    ),
+                },
+                status=400,
+            )
 
         worksheet = workbook.active
 
-    except Exception as error:
-        return JsonResponse({
-            "success": False,
-            "message": f"Unable to read Excel file: {error}",
-        }, status=400)
-
-    try:
-        images_archive = zipfile.ZipFile(
-            images_zip,
-            mode="r"
+        product_row_count = max(
+            worksheet.max_row - 1,
+            0,
         )
-    
-    except zipfile.BadZipFile:
-        return JsonResponse({
-            "success": False,
-            "message": "The selected ZIP file is invalid.",
-        }, status=400)
 
-    zip_image_map = build_zip_image_map(
-        images_archive
-    )
+        if product_row_count == 0:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        "The Excel file contains no "
+                        "product rows."
+                    ),
+                },
+                status=400,
+            )
 
-    if not zip_image_map:
-        images_archive.close()
+        if (
+            product_row_count
+            > MAX_BULK_PRODUCTS
+        ):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        f"Import a maximum of "
+                        f"{MAX_BULK_PRODUCTS} products "
+                        "at one time."
+                    ),
+                },
+                status=400,
+            )
 
-        return JsonResponse({
-            "success": False,
-            "message": (
-                "The ZIP file does not contain any "
-                "supported JPG, PNG, JPEG, or WebP images."
-            ),
-        }, status=400)
+        # ==================================================
+        # OPEN ZIP
+        # ==================================================
 
-    imported_count = 0
-    updated_count = 0
-    skipped_count = 0
-    errors = []
+        try:
+            images_zip.seek(0)
 
-    # These names are deleted if the database operation fails.
-    uploaded_storage_names = []
+            images_archive = zipfile.ZipFile(
+                images_zip,
+                mode="r",
+            )
 
-    try:
+        except zipfile.BadZipFile:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        "The selected images ZIP file "
+                        "is invalid."
+                    ),
+                },
+                status=400,
+            )
+
+        zip_image_map = build_zip_image_map(
+            images_archive
+        )
+
+        if not zip_image_map:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "status": "error",
+                    "message": (
+                        "The ZIP does not contain any "
+                        "JPG, JPEG, PNG or WebP images."
+                    ),
+                },
+                status=400,
+            )
+
+        imported_count = 0
+        updated_count = 0
+        skipped_count = 0
+        errors = []
+
+        # ==================================================
+        # PROCESS EXCEL ROWS
+        # ==================================================
+
         rows = worksheet.iter_rows(
             min_row=2,
-            values_only=True
+            values_only=True,
         )
 
         for row_number, row in enumerate(
             rows,
-            start=2
+            start=2,
         ):
+            # Ignore completely empty rows.
             if not any(
                 value not in (None, "")
                 for value in row
             ):
                 continue
 
-            row_values = list(row) + [None] * 10
+            # Ensure at least ten values are available.
+            row_values = (
+                list(row)
+                + [None] * 10
+            )
 
             (
                 category_name,
@@ -4743,18 +4898,31 @@ def import_products(request):
             )
 
             image_names = [
-                normalize_image_filename(image1),
-                normalize_image_filename(image2),
-                normalize_image_filename(image3),
+                normalize_image_filename(
+                    image1
+                ),
+                normalize_image_filename(
+                    image2
+                ),
+                normalize_image_filename(
+                    image3
+                ),
             ]
 
             image_names = [
-                name
-                for name in image_names
-                if name
+                image_name
+                for image_name in image_names
+                if image_name
             ]
 
-            if not category_name or not product_name:
+            # ----------------------------------------------
+            # Required row fields
+            # ----------------------------------------------
+
+            if (
+                not category_name
+                or not product_name
+            ):
                 skipped_count += 1
 
                 errors.append(
@@ -4769,7 +4937,7 @@ def import_products(request):
 
                 errors.append(
                     f"Row {row_number}: At least one "
-                    "product image is required."
+                    "image is required."
                 )
 
                 continue
@@ -4777,93 +4945,151 @@ def import_products(request):
             row_uploaded_names = []
 
             try:
+                # ------------------------------------------
+                # Parse values
+                # ------------------------------------------
+
                 price = parse_decimal(
                     price_value,
-                    "price",
-                    required=True
+                    "Price",
+                    required=True,
                 )
 
                 offer_price = parse_decimal(
                     offer_price_value,
-                    "offer price",
-                    required=False
+                    "Offer Price",
+                    required=False,
                 )
 
                 stock_quantity = parse_stock(
                     stock_value
                 )
 
+                # ------------------------------------------
+                # Validate all images before uploading
+                # ------------------------------------------
+
+                for image_name in image_names:
+                    if (
+                        image_name.lower()
+                        not in zip_image_map
+                    ):
+                        raise ValueError(
+                            f"Image '{image_name}' was "
+                            "not found inside the ZIP."
+                        )
+
+                product_was_created = False
+                old_images_list = []
+
+                # ------------------------------------------
+                # Database transaction for this row
+                # ------------------------------------------
+
                 with transaction.atomic():
-                    category = Category.objects.filter(
-                        category_name__iexact=category_name
-                    ).first()
-                    
-                    if not category:
+                    category = (
+                        Category.objects
+                        .filter(
+                            category_name__iexact=(
+                                category_name
+                            )
+                        )
+                        .first()
+                    )
+
+                    if category is None:
                         category = Category.objects.create(
                             category_name=category_name,
                             description="",
-                            is_active=True
+                            is_active=True,
                         )
 
-                    product = Product.objects.filter(
-                        product_name__iexact=product_name
-                    ).first()
-
-                    product_was_created = (
-                        product is None
+                    product = (
+                        Product.objects
+                        .filter(
+                            product_name__iexact=(
+                                product_name
+                            )
+                        )
+                        .first()
                     )
 
-                    if product_was_created:
+                    if product is None:
                         product = Product(
                             product_name=product_name
                         )
 
+                        product_was_created = True
+
                     product.category = category
                     product.price = price
-                    product.stock_quantity = stock_quantity
-                    product.short_description = short_description
-                    product.long_description = long_description
+
+                    product.stock_quantity = (
+                        stock_quantity
+                    )
+
+                    product.short_description = (
+                        short_description
+                    )
+
+                    product.long_description = (
+                        long_description
+                    )
+
                     product.is_active = True
 
-                    # Use your actual model field.
+                    # Your model may contain offer_price
+                    # or discount_price.
                     if hasattr(
                         product,
-                        "offer_price"
+                        "offer_price",
                     ):
-                        product.offer_price = offer_price
+                        product.offer_price = (
+                            offer_price
+                        )
 
                     elif hasattr(
                         product,
-                        "discount_price"
+                        "discount_price",
                     ):
-                        product.discount_price = offer_price
+                        product.discount_price = (
+                            offer_price
+                        )
 
                     product.save()
 
                     new_product_images = []
 
-                    # Upload all images to Cloudinary first.
-                    for image_index, image_name in enumerate(
+                    # --------------------------------------
+                    # Upload images to Cloudinary
+                    # --------------------------------------
+
+                    for (
+                        image_index,
+                        image_name,
+                    ) in enumerate(
                         image_names
                     ):
-                        saved_name = upload_zip_product_image(
-                            images_archive,
-                            zip_image_map,
-                            image_name
+                        saved_name = (
+                            upload_zip_product_image(
+                                images_archive,
+                                zip_image_map,
+                                image_name,
+                            )
                         )
 
                         row_uploaded_names.append(
                             saved_name
                         )
 
-                        uploaded_storage_names.append(
-                            saved_name
-                        )
-
-                        product_image = ProductImage.objects.create(
-                            product=product,
-                            image=saved_name,
-                            is_primary=(image_index == 0),
+                        product_image = (
+                            ProductImage.objects.create(
+                                product=product,
+                                image=saved_name,
+                                is_primary=(
+                                    image_index == 0
+                                ),
+                            )
                         )
 
                         new_product_images.append(
@@ -4872,29 +5098,50 @@ def import_products(request):
 
                     new_image_ids = [
                         product_image.id
-                        for product_image in new_product_images
+                        for product_image
+                        in new_product_images
                     ]
 
-                    # Delete old records only after all new
-                    # Cloudinary uploads succeed.
-                    old_images = (
+                    # --------------------------------------
+                    # Replace old product image records
+                    # --------------------------------------
+
+                    old_images_queryset = (
                         ProductImage.objects
-                        .filter(product=product)
-                        .exclude(id__in=new_image_ids)
+                        .filter(
+                            product=product
+                        )
+                        .exclude(
+                            id__in=new_image_ids
+                        )
                     )
 
-                    for old_image in old_images:
-                        try:
-                            old_image.image.delete(
-                                save=False
-                            )
-                        except Exception:
-                            pass
+                    old_images_list = list(
+                        old_images_queryset
+                    )
 
-                    old_images.delete()
+                    old_images_queryset.delete()
+
+                # ------------------------------------------
+                # Delete old physical files after success
+                # ------------------------------------------
+
+                for old_image in old_images_list:
+                    try:
+                        old_image.image.delete(
+                            save=False
+                        )
+
+                    except Exception:
+                        logger.exception(
+                            "Could not delete old "
+                            "product image %s",
+                            old_image.id,
+                        )
 
                 if product_was_created:
                     imported_count += 1
+
                 else:
                     updated_count += 1
 
@@ -4907,58 +5154,94 @@ def import_products(request):
                     f"{row_error}"
                 )
 
-                # Delete Cloudinary files uploaded for the
+                # Remove Cloudinary files created by the
                 # failed row.
-                storage = get_product_image_storage()
+                delete_saved_storage_files(
+                    row_uploaded_names
+                )
 
-                for saved_name in row_uploaded_names:
-                    try:
-                        storage.delete(
-                            saved_name
-                        )
-                    except Exception:
-                        pass
+                logger.exception(
+                    "Bulk import row %s failed",
+                    row_number,
+                )
+
+        # ==================================================
+        # FINAL RESPONSE
+        # ==================================================
+
+        message = (
+            "Bulk import completed. "
+            f"{imported_count} added, "
+            f"{updated_count} updated, "
+            f"{skipped_count} skipped."
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "status": "success",
+                "message": message,
+                "reload_required": True,
+
+                "summary": {
+                    "added": imported_count,
+                    "updated": updated_count,
+                    "skipped": skipped_count,
+                },
+
+                "errors": errors[:30],
+            }
+        )
 
     finally:
-        images_archive.close()
+        if images_archive is not None:
+            images_archive.close()
 
-    message = (
-        f"Bulk import completed. "
-        f"{imported_count} added, "
-        f"{updated_count} updated, "
-        f"{skipped_count} skipped."
-    )
+        if workbook is not None:
+            workbook.close()
+            
+# ==========================================================
+# BULK PRODUCT IMPORT VIEW
+# ==========================================================
 
-    return JsonResponse({
-        "success": True,
-        "status": "success",
-        "message": message,
-        "reload_required": True,
-        "summary": {
-            "added": imported_count,
-            "updated": updated_count,
-            "skipped": skipped_count,
-        },
-        "errors": errors[:30],
-    })
+@login_required
+@role_permission_required(
+    "Can Manage Products"
+)
+@require_POST
+def import_products(request):
+    """
+    AJAX endpoint used by the Bulk Import modal.
+    """
+
+    try:
+        return process_product_bulk_import(
+            request
+        )
+
+    except Exception as error:
+        logger.exception(
+            "Bulk product import failed"
+        )
+
+        traceback.print_exc()
+
+        return JsonResponse(
+            {
+                "success": False,
+                "status": "error",
+                "message": (
+                    "Bulk import failed: "
+                    f"{error.__class__.__name__}: "
+                    f"{error}"
+                ),
+            },
+            status=500,
+        )
+
 # ==========================================================
 # COMMON BLOG QUERY HELPERS
 # ==========================================================
-
-def get_blog_posts_queryset():
-    """
-    Reusable BlogPost queryset used by admin and website pages.
-    """
-
-    return (
-        BlogPost.objects
-        .select_related(
-            "category",
-            "author"
-        )
-        .order_by("-published_at")
-    )
-
 
 def get_published_blog_posts():
     """
@@ -4972,67 +5255,3 @@ def get_published_blog_posts():
             published_at__lte=timezone.now()
         )
     )
-
-
-def blog_post_json(post):
-    """
-    Reusable BlogPost JSON data for AJAX responses.
-    """
-
-    return {
-        "id": str(post.id),
-        "title": post.title,
-        "slug": post.slug,
-
-        "category": (
-            post.category.category_name
-            if post.category else
-            "Uncategorized"
-        ),
-
-        "category_id": (
-            str(post.category.id)
-            if post.category else
-            ""
-        ),
-
-        "short_description": (
-            post.short_description
-        ),
-
-        "content": post.content,
-
-        "image": (
-            post.image.url
-            if post.image else
-            ""
-        ),
-
-        "is_featured": post.is_featured,
-        "is_published": post.is_published,
-        "status": post.status_text,
-
-        "published_at": timezone.localtime(
-            post.published_at
-        ).strftime("%Y-%m-%dT%H:%M"),
-
-        "published_date": timezone.localtime(
-            post.published_at
-        ).strftime("%d %b %Y"),
-
-        "views_count": post.views_count,
-    }
-
-
-def blog_category_json(category):
-    """
-    Reusable BlogCategory JSON data for AJAX responses.
-    """
-
-    return {
-        "id": str(category.id),
-        "category_name": category.category_name,
-        "description": category.description or "",
-        "is_active": category.is_active,
-        "posts_count": category.posts.count(),
-    }
