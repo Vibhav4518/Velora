@@ -5205,39 +5205,40 @@ def process_product_bulk_import(request):
 # ==========================================================
 
 @login_required
-@role_permission_required(
-    "Can Manage Products"
-)
+@role_permission_required("Can Manage Products")
 @require_POST
 def import_products(request):
-    """
-    AJAX endpoint used by the Bulk Import modal.
-    """
-
     try:
-        return process_product_bulk_import(
-            request
-        )
+        return process_product_bulk_import(request)
 
     except Exception as error:
-        logger.exception(
-            "Bulk product import failed"
+        error_traceback = traceback.format_exc()
+
+        logger.error(
+            "BULK PRODUCT IMPORT FAILED\n%s",
+            error_traceback
         )
 
-        traceback.print_exc()
-
-        return JsonResponse(
-            {
-                "success": False,
-                "status": "error",
-                "message": (
-                    "Bulk import failed: "
-                    f"{error.__class__.__name__}: "
-                    f"{error}"
-                ),
-            },
-            status=500,
+        print(
+            "BULK PRODUCT IMPORT FAILED",
+            flush=True
         )
+
+        print(
+            error_traceback,
+            flush=True
+        )
+
+        # Temporarily use status 200 so your current
+        # JavaScript displays the real backend error.
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                f"{error.__class__.__name__}: {error}"
+            ),
+            "debug": error_traceback,
+        }, status=200)
 
 # ==========================================================
 # COMMON BLOG QUERY HELPERS
