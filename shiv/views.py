@@ -41,13 +41,14 @@ from decimal import Decimal
 from django.utils import timezone
 
 import uuid
+from django.core.files import File
+
 
 from django.core.files.storage import default_storage
 from django.utils.text import get_valid_filename
 
 from cloudinary_storage.storage import MediaCloudinaryStorage
 
-import io
 import zipfile
 from decimal import Decimal, InvalidOperation
 
@@ -3034,17 +3035,13 @@ def build_zip_image_map(zip_file):
     return image_map
 
 
+
+
 def upload_zip_product_image(
     zip_file,
     zip_image_map,
     image_filename
 ):
-    """
-    Read an image from ZIP and upload it to Cloudinary.
-
-    Returns the saved Cloudinary storage name.
-    """
-
     normalized_name = normalize_image_filename(
         image_filename
     )
@@ -3062,24 +3059,15 @@ def upload_zip_product_image(
             "inside the ZIP file."
         )
 
-    image_bytes = zip_file.read(
-        zip_entry
-    )
-
-    if not image_bytes:
-        raise ValueError(
-            f"Image '{normalized_name}' is empty."
+    with zip_file.open(zip_entry, "r") as image_stream:
+        uploaded_file = File(
+            image_stream,
+            name=normalized_name
         )
 
-    uploaded_file = ContentFile(
-        image_bytes,
-        name=normalized_name
-    )
-
-    return save_product_uploaded_image(
-        uploaded_file
-    )
-
+        return save_product_uploaded_image(
+            uploaded_file
+        )
 
 def parse_decimal(value, field_name, required=False):
     cleaned_value = clean_excel_value(value)
@@ -4573,11 +4561,33 @@ def create_product_image(product, image_name, missing_images, primary=False):
             image=File(img, name=f"products/{image_name}"),
             is_primary=primary
         )
-
+        
+MAX_BULK_PRODUCTS = 10
+MAX_ZIP_SIZE = 20 * 1024 * 1024
+MAX_EXCEL_SIZE = 2 * 1024 * 1024
 
 @login_required
 @role_permission_required("Can Manage Products")
 def import_products(request):
+    
+    
+    if excel_file.size > MAX_EXCEL_SIZE:
+        return JsonResponse({
+            "success": False,
+            "message": (
+                "Excel file is too large. "
+                "Maximum allowed size is 2 MB."
+            ),
+        }, status=400)
+    
+    if images_zip.size > MAX_ZIP_SIZE:
+        return JsonResponse({
+            "success": False,
+            "message": (
+                "Images ZIP is too large. "
+                "Maximum allowed size is 20 MB."
+            ),
+        }, status=400)
     if request.method != "POST":
         return JsonResponse({
             "success": False,
@@ -4596,6 +4606,22 @@ def import_products(request):
         return JsonResponse({
             "success": False,
             "message": "Please select an Excel file.",
+        }, status=400)
+        
+    product_row_count = max(
+        worksheet.max_row - 1,
+        0
+    )
+    
+    if product_row_count > MAX_BULK_PRODUCTS:
+        images_archive.close()
+    
+        return JsonResponse({
+            "success": False,
+            "message": (
+                f"Import a maximum of "
+                f"{MAX_BULK_PRODUCTS} products at once."
+            ),
         }, status=400)
 
     if not images_zip:
@@ -4635,14 +4661,11 @@ def import_products(request):
         }, status=400)
 
     try:
-        zip_buffer = io.BytesIO(
-            images_zip.read()
-        )
-
         images_archive = zipfile.ZipFile(
-            zip_buffer
+            images_zip,
+            mode="r"
         )
-
+    
     except zipfile.BadZipFile:
         return JsonResponse({
             "success": False,

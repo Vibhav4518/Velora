@@ -124,8 +124,6 @@ function escapeAttr(value) {
     .replaceAll("'", "&#039;");
 }
 
-
-
 /* =========================
    MAIN INIT
 ========================= */
@@ -359,8 +357,6 @@ function initWishlistButtons() {
 /* =========================================================
    PUBLIC BLOG DETAILS POPUP
 ========================================================= */
-
-
 
 function initPublicBlogPopup() {
   const modalElement =
@@ -3706,6 +3702,7 @@ function initAdminTheme() {
    GENERIC AJAX CRUD ENGINE
 ========================= */
 
+
 /* =========================================================
    REUSABLE AJAX FORM ENGINE
 ========================================================= */
@@ -3714,34 +3711,33 @@ function initAjaxCRUD() {
   document.addEventListener(
     "submit",
     async function (event) {
-      const form =
-        event.target.closest(
-          ".ajax-form"
-        );
+      const form = event.target.closest(
+        "form.ajax-form, form[data-ajax-form]"
+      );
 
       if (!form) {
         return;
       }
 
       event.preventDefault();
+      event.stopPropagation();
 
-      if (
-        form.dataset.submitting ===
-        "true"
-      ) {
+      if (form.dataset.submitting === "true") {
         return;
       }
 
-      form.dataset.submitting =
-        "true";
+      form.dataset.submitting = "true";
 
-      const submitButton =
-        form.querySelector(
-          '[type="submit"]'
-        );
+      const isBulkImport = form.matches(
+        "#bulkImportForm, [data-bulk-import-form]"
+      );
+
+      const submitButton = form.querySelector(
+        '[type="submit"]'
+      );
 
       const originalButtonHTML =
-        submitButton?.innerHTML;
+        submitButton?.innerHTML || "";
 
       clearAjaxFormErrors(form);
 
@@ -3753,37 +3749,96 @@ function initAjaxCRUD() {
             class="spinner-border spinner-border-sm me-2"
             aria-hidden="true"
           ></span>
-          Saving...
+          ${isBulkImport ? "Importing..." : "Saving..."}
         `;
       }
 
       try {
-        const response =
-          await fetch(
-            form.action,
-            {
-              method:
-                form.method || "POST",
+        let response;
 
-              headers: {
-                "X-CSRFToken":
-                  getCSRFToken(),
+        try {
+          response = await fetch(form.action, {
+            method: (
+              form.method || "POST"
+            ).toUpperCase(),
 
-                "X-Requested-With":
-                  "XMLHttpRequest",
-              },
+            body: new FormData(form),
 
-              body:
-                new FormData(form),
-            }
+            credentials: "same-origin",
+
+            headers: {
+              "X-CSRFToken": getCSRFToken(),
+
+              "X-Requested-With":
+                "XMLHttpRequest",
+
+              Accept: "application/json",
+            },
+          });
+        } catch (networkError) {
+          console.error(
+            "AJAX network error:",
+            networkError
           );
+
+          throw new Error(
+            isBulkImport
+              ? (
+                  "The server stopped during bulk import. " +
+                  "Use fewer products and smaller images."
+                )
+              : (
+                  "The server connection was interrupted. " +
+                  "Please try again."
+                )
+          );
+        }
+
+        /*
+         * Never call response.json() directly here.
+         * Render may return an HTML 500 page.
+         */
+        const responseText =
+          await response.text();
 
         let data;
 
         try {
-          data =
-            await response.json();
-        } catch (error) {
+          data = responseText
+            ? JSON.parse(responseText)
+            : {};
+        } catch (parseError) {
+          console.error(
+            "Server returned non-JSON response:",
+            {
+              status: response.status,
+              contentType:
+                response.headers.get(
+                  "content-type"
+                ),
+              response:
+                responseText.slice(0, 1000),
+            }
+          );
+
+          if (
+            isBulkImport &&
+            response.status >= 500
+          ) {
+            throw new Error(
+              "The server ran out of memory during bulk import. " +
+              "Import only 1–3 products with one compressed " +
+              "image per product."
+            );
+          }
+
+          if (response.status >= 500) {
+            throw new Error(
+              "The server encountered an internal error. " +
+              "Check the Render logs."
+            );
+          }
+
           throw new Error(
             "The server returned an invalid response."
           );
@@ -3801,22 +3856,17 @@ function initAjaxCRUD() {
 
           throw new Error(
             data.message ||
-            "Please correct the form errors."
+            "Unable to complete the request."
           );
         }
-
-        showToast(
-          "success",
-          data.message ||
-          "Saved successfully."
-        );
 
         const modalElement =
           form.closest(".modal");
 
         if (
           modalElement &&
-          window.bootstrap
+          window.bootstrap &&
+          form.dataset.closeModal !== "false"
         ) {
           bootstrap.Modal
             .getOrCreateInstance(
@@ -3825,57 +3875,100 @@ function initAjaxCRUD() {
             .hide();
         }
 
-        form.reset();
+        if (isBulkImport && window.Swal) {
+          const summary =
+            data.summary || {};
 
-        const hiddenId =
-          form.querySelector(
-            'input[name$="_id"]'
+          await Swal.fire({
+            icon: "success",
+            title: "Bulk Import Complete",
+
+            html: `
+              <p>
+                ${escapeHTML(
+                  data.message ||
+                  "Products imported successfully."
+                )}
+              </p>
+
+              <div class="d-flex justify-content-center gap-2 flex-wrap">
+
+                <span class="badge bg-success">
+                  Added: ${Number(summary.added || 0)}
+                </span>
+
+                <span class="badge bg-primary">
+                  Updated: ${Number(summary.updated || 0)}
+                </span>
+
+                <span class="badge bg-warning text-dark">
+                  Skipped: ${Number(summary.skipped || 0)}
+                </span>
+
+              </div>
+            `,
+
+            confirmButtonColor: "#2563eb",
+          });
+        } else {
+          showToast(
+            "success",
+            data.message ||
+            "Saved successfully."
           );
+        }
 
-        if (hiddenId) {
-          hiddenId.value = "";
+        if (form.dataset.reset !== "false") {
+          form.reset();
         }
 
         if (data.redirect_url) {
           window.location.href =
             data.redirect_url;
-
           return;
         }
 
         if (data.redirect) {
           window.location.href =
             data.redirect;
-
-          return;
-        }
-
-        if (data.reload_required) {
-          window.location.reload();
-
           return;
         }
 
         if (
-          data.html &&
-          data.target
+          data.reload_required ||
+          data.reload === true
         ) {
-          const target =
-            document.querySelector(
-              data.target
-            );
-
-          if (target) {
-            target.innerHTML =
-              data.html;
-          }
+          window.location.reload();
+          return;
         }
-      } catch (error) {
-        showToast(
-          "error",
-          error.message ||
-          "Something went wrong."
+
+        handleAjaxResponse(
+          data,
+          form
         );
+
+      } catch (error) {
+        console.error(
+          "AJAX form error:",
+          error
+        );
+
+        if (window.Swal) {
+          await Swal.fire({
+            icon: "error",
+            title: "Error",
+            text:
+              error.message ||
+              "Something went wrong.",
+            confirmButtonColor:
+              "#6d5dfc",
+          });
+        } else {
+          alert(
+            error.message ||
+            "Something went wrong."
+          );
+        }
       } finally {
         form.dataset.submitting =
           "false";
@@ -3888,10 +3981,10 @@ function initAjaxCRUD() {
             originalButtonHTML;
         }
       }
-    }
+    },
+    true
   );
 }
-
 
 /* =========================================================
    AJAX FORM ERRORS
@@ -8607,194 +8700,3 @@ function initUnifiedCardCountdown(timer) {
     );
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll("form[data-ajax-form]").forEach((form) => {
-    if (form.dataset.ajaxInitialized === "true") {
-      return;
-    }
-
-    form.dataset.ajaxInitialized = "true";
-
-    form.addEventListener("submit", async function (event) {
-      event.preventDefault();
-
-      const submitButton = form.querySelector(
-        'button[type="submit"]'
-      );
-
-      const originalButtonHtml = submitButton
-        ? submitButton.innerHTML
-        : "";
-
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = `
-          <span class="spinner-border spinner-border-sm me-2"></span>
-          Processing...
-        `;
-      }
-
-      try {
-        const response = await fetch(form.action, {
-          method: form.method || "POST",
-          body: new FormData(form),
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message || "Something went wrong."
-          );
-        }
-
-        const modalElement = form.closest(".modal");
-
-        if (
-          modalElement &&
-          form.dataset.closeModal === "true"
-        ) {
-          const modalInstance =
-            bootstrap.Modal.getInstance(modalElement) ||
-            bootstrap.Modal.getOrCreateInstance(modalElement);
-
-          modalInstance.hide();
-        }
-
-        if (form.dataset.reset === "true") {
-          form.reset();
-
-          form.querySelectorAll(".image-preview").forEach(
-            (preview) => {
-              preview.removeAttribute("src");
-              preview.style.display = "none";
-            }
-          );
-        }
-
-        await Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: data.message || "Saved successfully.",
-          timer: 1600,
-          showConfirmButton: false,
-        });
-
-        if (data.reload_required) {
-          window.location.reload();
-        }
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: error.message || "Request failed.",
-        });
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.innerHTML = originalButtonHtml;
-        }
-      }
-    });
-  });
-});
-
-function initAjaxForms() {
-  document.querySelectorAll("form[data-ajax-form]").forEach((form) => {
-    if (form.dataset.ajaxBound === "true") {
-      return;
-    }
-
-    form.dataset.ajaxBound = "true";
-
-    form.addEventListener("submit", async function (event) {
-      event.preventDefault();
-
-      const submitButton = form.querySelector(
-        'button[type="submit"]'
-      );
-
-      const originalButtonContent = submitButton
-        ? submitButton.innerHTML
-        : "";
-
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = `
-          <span
-            class="spinner-border spinner-border-sm me-2"
-            role="status"
-          ></span>
-          Processing...
-        `;
-      }
-
-      try {
-        const response = await fetch(form.action, {
-          method: form.method || "POST",
-          body: new FormData(form),
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-          },
-          credentials: "same-origin",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.success === false) {
-          throw new Error(
-            data.message || "Unable to process the request."
-          );
-        }
-
-        const modalElement = form.closest(".modal");
-
-        if (
-          modalElement &&
-          form.dataset.closeModal === "true"
-        ) {
-          const modal =
-            bootstrap.Modal.getInstance(modalElement) ||
-            bootstrap.Modal.getOrCreateInstance(modalElement);
-
-          modal.hide();
-        }
-
-        if (form.dataset.reset === "true") {
-          form.reset();
-        }
-
-        await Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: data.message || "Saved successfully.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-        if (data.reload_required) {
-          window.location.href = window.location.href;
-        }
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: error.message || "Something went wrong.",
-        });
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.innerHTML = originalButtonContent;
-        }
-      }
-    });
-  });
-}
-
-document.addEventListener(
-  "DOMContentLoaded",
-  initAjaxForms
-);
