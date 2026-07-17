@@ -40,12 +40,70 @@ from reportlab.pdfgen import canvas
 from decimal import Decimal
 from django.utils import timezone
 
+import uuid
+
+from django.core.files.storage import default_storage
+from django.utils.text import get_valid_filename
+
+from cloudinary_storage.storage import MediaCloudinaryStorage
+
 # ==========================================================
 # COMMON ADMIN QUERY HELPERS
 # ==========================================================
 # ==========================================================
 # REUSABLE PRODUCT CARD QUERYSET
 # ==========================================================
+
+# ==========================================================
+# PRODUCT IMAGE STORAGE HELPERS
+# ==========================================================
+
+def get_product_image_storage():
+    """
+    Use Cloudinary when its credentials are available.
+    Otherwise use local media storage during development.
+    """
+
+    if getattr(settings, "USE_CLOUDINARY", False):
+        return MediaCloudinaryStorage()
+
+    return default_storage
+
+
+def save_product_uploaded_image(uploaded_file):
+    """
+    Save the physical file first.
+
+    Returns the saved storage name only after the storage
+    backend accepts the upload.
+    """
+
+    if not uploaded_file:
+        raise ValueError("No image file was received.")
+
+    storage = get_product_image_storage()
+
+    original_name = get_valid_filename(
+        uploaded_file.name
+    )
+
+    unique_name = (
+        f"products/"
+        f"{uuid.uuid4().hex}_"
+        f"{original_name}"
+    )
+
+    saved_name = storage.save(
+        unique_name,
+        uploaded_file
+    )
+
+    if not saved_name:
+        raise ValueError(
+            "The image storage did not return a saved filename."
+        )
+
+    return saved_name
 
 def get_product_card_queryset():
     """
@@ -3328,10 +3386,10 @@ def category_list(request):
 @role_permission_required("Can Manage Products")
 @login_required
 def add_product(request):
-    categories = Category.objects.filter(
-        is_active=True
-    ).order_by(
-        "category_name"
+    categories = (
+        Category.objects
+        .filter(is_active=True)
+        .order_by("category_name")
     )
 
     if request.method != "POST":
@@ -3378,7 +3436,7 @@ def add_product(request):
         == "True"
     )
 
-    product_images = request.FILES.getlist(
+    uploaded_images = request.FILES.getlist(
         "product_images"
     )
 
@@ -3388,50 +3446,31 @@ def add_product(request):
         or not stock_quantity
         or not category_id
     ):
-        message = (
-            "Please fill all required product fields."
-        )
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                "Please fill all required product fields."
+            ),
+        }, status=400)
 
-        if request.headers.get(
-            "X-Requested-With"
-        ) == "XMLHttpRequest":
-            return JsonResponse({
-                "success": False,
-                "status": "error",
-                "message": message,
-            }, status=400)
-
-        messages.error(
-            request,
-            message
-        )
-
-        return redirect(
-            "admin_products"
-        )
+    if not uploaded_images:
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                "Please select at least one product image."
+            ),
+        }, status=400)
 
     if Product.objects.filter(
         product_name__iexact=product_name
     ).exists():
-        message = "Product already exists."
-
-        if request.headers.get(
-            "X-Requested-With"
-        ) == "XMLHttpRequest":
-            return JsonResponse({
-                "success": False,
-                "status": "error",
-                "message": message,
-            }, status=400)
-
-        messages.error(
-            request,
-            message
-        )
-
-        return redirect(
-            "admin_products"
-        )
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": "Product already exists.",
+        }, status=400)
 
     category = get_object_or_404(
         Category,
@@ -3448,50 +3487,74 @@ def add_product(request):
         is_active=is_active,
     )
 
-    for index, uploaded_image in enumerate(
-        product_images
-    ):
-        ProductImage.objects.create(
-            product=product,
-            image=uploaded_image,
-            is_primary=(index == 0),
-        )
+    created_images = []
 
-    response_data = {
+    try:
+        for index, uploaded_file in enumerate(
+            uploaded_images
+        ):
+            saved_name = save_product_uploaded_image(
+                uploaded_file
+            )
+
+            product_image = ProductImage.objects.create(
+                product=product,
+                image=saved_name,
+                is_primary=(index == 0),
+            )
+
+            created_images.append(
+                product_image
+            )
+
+    except Exception as error:
+        for product_image in created_images:
+            try:
+                product_image.image.delete(
+                    save=False
+                )
+            except Exception:
+                pass
+
+        product.delete()
+
+        return JsonResponse({
+            "success": False,
+            "status": "error",
+            "message": (
+                f"Image upload failed: {error}"
+            ),
+        }, status=500)
+
+    product.refresh_from_db()
+
+    return JsonResponse({
         "success": True,
         "status": "success",
         "message": "Product added successfully.",
         "reload_required": True,
+
         "product": {
             "id": str(product.id),
             "name": product.product_name,
             "category": category.category_name,
             "price": str(product.price),
             "stock": product.stock_quantity,
+
             "status": (
                 "Active"
                 if product.is_active
                 else "Inactive"
             ),
+
             "image": product.primary_image_url,
+
+            "uploaded_images": [
+                image.image.url
+                for image in created_images
+            ],
         },
-    }
-
-    if request.headers.get(
-        "X-Requested-With"
-    ) == "XMLHttpRequest":
-        return JsonResponse(
-            response_data
-        )
-
-    messages.success(
-        request,
-        response_data["message"]
-    )
-
-    return redirect(
-        "admin_products"
-    )
+    })
 
 @login_required
 @role_permission_required("Can Manage Products")
@@ -3557,11 +3620,9 @@ def admin_products(request):
 @login_required
 def edit_product_admin(request, id):
     product = get_object_or_404(
-        Product.objects.select_related(
-            "category"
-        ).prefetch_related(
-            "images"
-        ),
+        Product.objects
+        .select_related("category")
+        .prefetch_related("images"),
         id=id
     )
 
@@ -3604,13 +3665,16 @@ def edit_product_admin(request, id):
             ),
         }, status=400)
 
-    duplicate_product = Product.objects.filter(
-        product_name__iexact=product_name
-    ).exclude(
-        id=product.id
-    ).exists()
+    duplicate_exists = (
+        Product.objects
+        .filter(
+            product_name__iexact=product_name
+        )
+        .exclude(id=product.id)
+        .exists()
+    )
 
-    if duplicate_product:
+    if duplicate_exists:
         return JsonResponse({
             "success": False,
             "status": "error",
@@ -3624,7 +3688,13 @@ def edit_product_admin(request, id):
         id=category_id
     )
 
+    uploaded_images = request.FILES.getlist(
+        "product_images"
+    )
+
+    # Update normal product information.
     product.product_name = product_name
+
     product.short_description = request.POST.get(
         "short_description",
         ""
@@ -3646,67 +3716,107 @@ def edit_product_admin(request, id):
 
     product.save()
 
-    uploaded_images = request.FILES.getlist(
-        "product_images"
-    )
+    created_images = []
 
     if uploaded_images:
-        # Old images remain available but are no longer primary.
-        ProductImage.objects.filter(
-            product=product
-        ).update(
-            is_primary=False
-        )
+        try:
+            # Upload every new physical file first.
+            for index, uploaded_file in enumerate(
+                uploaded_images
+            ):
+                saved_name = save_product_uploaded_image(
+                    uploaded_file
+                )
 
-        for index, uploaded_image in enumerate(
-            uploaded_images
-        ):
-            ProductImage.objects.create(
-                product=product,
-                image=uploaded_image,
-                is_primary=(index == 0),
+                new_image = ProductImage.objects.create(
+                    product=product,
+                    image=saved_name,
+                    is_primary=(index == 0),
+                )
+
+                created_images.append(
+                    new_image
+                )
+
+            new_image_ids = [
+                image.id
+                for image in created_images
+            ]
+
+            # Remove the old records only after all new
+            # uploads succeed.
+            old_images = (
+                ProductImage.objects
+                .filter(product=product)
+                .exclude(id__in=new_image_ids)
             )
+
+            for old_image in old_images:
+                try:
+                    old_image.image.delete(
+                        save=False
+                    )
+                except Exception:
+                    pass
+
+            old_images.delete()
+
+        except Exception as error:
+            for new_image in created_images:
+                try:
+                    new_image.image.delete(
+                        save=False
+                    )
+                except Exception:
+                    pass
+
+                new_image.delete()
+
+            return JsonResponse({
+                "success": False,
+                "status": "error",
+                "message": (
+                    f"Image upload failed: {error}"
+                ),
+            }, status=500)
 
     product.refresh_from_db()
 
-    response_data = {
+    return JsonResponse({
         "success": True,
         "status": "success",
         "message": "Product updated successfully.",
         "reload_required": True,
+
         "entity": {
             "type": "product",
             "id": str(product.id),
+
             "fields": {
                 "name": product.product_name,
                 "category": category.category_name,
                 "price": f"₹{product.price}",
                 "stock": product.stock_quantity,
+
                 "status": (
                     "Active"
                     if product.is_active
                     else "Inactive"
                 ),
+
                 "image": product.primary_image_url,
             },
         },
-    }
 
-    if request.headers.get(
-        "X-Requested-With"
-    ) == "XMLHttpRequest":
-        return JsonResponse(
-            response_data
-        )
+        "received_file_count": len(
+            uploaded_images
+        ),
 
-    messages.success(
-        request,
-        response_data["message"]
-    )
-
-    return redirect(
-        "admin_products"
-    )
+        "uploaded_images": [
+            image.image.url
+            for image in created_images
+        ],
+    })
         
         
         
