@@ -8602,3 +8602,98 @@ function initUnifiedCardCountdown(timer) {
       1000
     );
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("form[data-ajax-form]").forEach((form) => {
+    if (form.dataset.ajaxInitialized === "true") {
+      return;
+    }
+
+    form.dataset.ajaxInitialized = "true";
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const submitButton = form.querySelector(
+        'button[type="submit"]'
+      );
+
+      const originalButtonHtml = submitButton
+        ? submitButton.innerHTML
+        : "";
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML = `
+          <span class="spinner-border spinner-border-sm me-2"></span>
+          Processing...
+        `;
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: form.method || "POST",
+          body: new FormData(form),
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || "Something went wrong."
+          );
+        }
+
+        const modalElement = form.closest(".modal");
+
+        if (
+          modalElement &&
+          form.dataset.closeModal === "true"
+        ) {
+          const modalInstance =
+            bootstrap.Modal.getInstance(modalElement) ||
+            bootstrap.Modal.getOrCreateInstance(modalElement);
+
+          modalInstance.hide();
+        }
+
+        if (form.dataset.reset === "true") {
+          form.reset();
+
+          form.querySelectorAll(".image-preview").forEach(
+            (preview) => {
+              preview.removeAttribute("src");
+              preview.style.display = "none";
+            }
+          );
+        }
+
+        await Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: data.message || "Saved successfully.",
+          timer: 1600,
+          showConfirmButton: false,
+        });
+
+        if (data.reload_required) {
+          window.location.reload();
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message || "Request failed.",
+        });
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonHtml;
+        }
+      }
+    });
+  });
+});
