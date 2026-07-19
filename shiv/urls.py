@@ -157,9 +157,9 @@ urlpatterns = [
 # ======================================================
 
 path(
-    "admin/blogs/",
+    "admin/blog/posts/",
     views.admin_blog_posts,
-    name="admin_blog_posts"
+    name="admin_blog_posts",
 ),
 
 path(

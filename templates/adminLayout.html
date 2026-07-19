@@ -95,12 +95,14 @@
     </a>
     {% endif %}
 
-    {% if can_manage_blog %}
-    <a href="{% url 'admin_blog_posts' %}">
-        <i class="bi bi-journal-richtext me-2"></i>
-        Blog Management
-    </a>
-    {% endif %}
+    {% url 'admin_blog_posts' as admin_blog_posts_url %}
+
+{% if can_manage_blog and admin_blog_posts_url %}
+<a href="{{ admin_blog_posts_url }}">
+    <i class="bi bi-journal-richtext me-2"></i>
+    Blog Management
+</a>
+{% endif %}
 
 </div>
   </li>
@@ -119,7 +121,11 @@
       {% if can_manage_orders %}
       <a href="{% url 'admin_orders' %}">Orders</a>
       {% endif %}
-<a href="{% url 'admin_deals' %}">Deals</a>
+{% url 'admin_deals' as admin_deals_url %}
+
+{% if admin_deals_url %}
+<a href="{{ admin_deals_url }}">Deals</a>
+{% endif %}
       {% if can_manage_payments %}
       <a href="{% url 'admin_payments' %}">Payments</a>
       {% endif %}
@@ -160,13 +166,14 @@
   </a>
   {% if can_manage_customers %}
 
-  <a href="{% url 'admin_contact_messages' %}">
+  {% url 'admin_contact_messages' as admin_contact_messages_url %}
 
+{% if can_manage_customers and admin_contact_messages_url %}
+<a href="{{ admin_contact_messages_url }}">
     <i class="bi bi-chat-left-text me-2"></i>
-
     Contact Messages
-
-  </a>
+</a>
+{% endif %}
 
 {% endif %}
       <a href="{% url 'logout_user' %}" class="text-danger">Logout</a>

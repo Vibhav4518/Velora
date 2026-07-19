@@ -229,7 +229,15 @@
               <i class="bi bi-geo-alt"></i>
               <div>
                 <small>Address</small>
-                <p>{{ customer.address|default:"No address added" }}</p>
+                <p>
+{% with address=customer.addresses.first %}
+    {% if address %}
+        {{ address.address_line1 }}, {{ address.city }}
+    {% else %}
+        No address added
+    {% endif %}
+{% endwith %}
+</p>
               </div>
             </div>
 

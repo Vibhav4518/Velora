@@ -3357,7 +3357,6 @@ def admin_role_permission(request, role_id):
 # ==========================================================
 
 @role_permission_required("Can Manage Admins")
-@login_required
 def admin_users(request):
     query = request.GET.get("q", "")
 
@@ -4545,7 +4544,6 @@ def admin_payments(request):
 # ==========================================================
 
 @role_permission_required("Can Manage Customers")
-@login_required
 def admin_customers(request):
     query = request.GET.get("q", "")
 
