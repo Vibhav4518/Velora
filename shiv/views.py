@@ -3355,40 +3355,63 @@ def admin_role_permission(request, role_id):
 
 @role_permission_required("Can Manage Admins")
 def admin_users(request):
-    query = request.GET.get("q", "")
+    try:
+        query = request.GET.get("q", "").strip()
 
-    # Common Admin Query
-    users = get_admins_queryset()
+        users = get_admins_queryset()
 
-    if query:
-        users = users.filter(
-            Q(username__icontains=query) |
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(email__icontains=query) |
-            Q(mobile_no__icontains=query) |
-            Q(role__role_name__icontains=query)
+        if query:
+            users = users.filter(
+                Q(username__icontains=query)
+                | Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(mobile_no__icontains=query)
+                | Q(role__role_name__icontains=query)
+            )
+
+        roles = Role.objects.all().order_by("role_name")
+        admins = get_admins_queryset()
+
+        context = {
+            "users": users,
+            "roles": roles,
+            "total_admins": admins.count(),
+            "active_admins": admins.filter(
+                is_active=True
+            ).count(),
+            "inactive_admins": admins.filter(
+                is_active=False
+            ).count(),
+            "total_roles": Role.objects.count(),
+        }
+
+        context.update(
+            get_admin_permissions_context(
+                request.user
+            )
         )
 
-    roles = Role.objects.all().order_by("role_name")
+        return render(
+            request,
+            "adminUserList.html",
+            context
+        )
 
-    # Common Query for Dashboard Cards
-    admins = get_admins_queryset()
+    except Exception:
+        error_traceback = traceback.format_exc()
 
-    context = {
-        "users": users,
-        "roles": roles,
+        print(
+            "ADMIN USERS PAGE ERROR",
+            flush=True
+        )
 
-        "total_admins": admins.count(),
-        "active_admins": admins.filter(is_active=True).count(),
-        "inactive_admins": admins.filter(is_active=False).count(),
-        "total_roles": Role.objects.count(),
-    }
+        print(
+            error_traceback,
+            flush=True
+        )
 
-    # Sidebar Permissions
-    context.update(get_admin_permissions_context(request.user))
-
-    return render(request, "adminUserList.html", context)
+        raise
 
 @role_permission_required("Can Manage Admins")
 def add_admin_user(request):
@@ -4542,29 +4565,65 @@ def admin_payments(request):
 
 @role_permission_required("Can Manage Customers")
 def admin_customers(request):
-    query = request.GET.get("q", "")
+    try:
+        query = request.GET.get("q", "").strip()
 
-    customers = get_customers_queryset()
+        customers = get_customers_queryset()
 
-    if query:
-        customers = customers.filter(
-            Q(username__icontains=query) |
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(email__icontains=query) |
-            Q(mobile_no__icontains=query)
+        if query:
+            customers = customers.filter(
+                Q(username__icontains=query)
+                | Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(mobile_no__icontains=query)
+            )
+
+        all_customers = get_customers_queryset()
+
+        context = {
+            "customers": customers,
+            "total_customers": (
+                all_customers.count()
+            ),
+            "active_customers": (
+                all_customers
+                .filter(is_active=True)
+                .count()
+            ),
+            "inactive_customers": (
+                all_customers
+                .filter(is_active=False)
+                .count()
+            ),
+        }
+
+        context.update(
+            get_admin_permissions_context(
+                request.user
+            )
         )
 
-    context = {
-        "customers": customers,
-        "total_customers": get_customers_queryset().count(),
-        "active_customers": get_customers_queryset().filter(is_active=True).count(),
-        "inactive_customers": get_customers_queryset().filter(is_active=False).count(),
-    }
+        return render(
+            request,
+            "adminCustomers.html",
+            context
+        )
 
-    context.update(get_admin_permissions_context(request.user))
+    except Exception:
+        error_traceback = traceback.format_exc()
 
-    return render(request, "adminCustomers.html", context)
+        print(
+            "ADMIN CUSTOMERS PAGE ERROR",
+            flush=True
+        )
+
+        print(
+            error_traceback,
+            flush=True
+        )
+
+        raise
 
 @role_permission_required("Can Manage Customers")
 def edit_customer(request, id):
