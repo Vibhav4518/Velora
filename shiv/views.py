@@ -226,13 +226,13 @@ ALLOWED_IMAGE_EXTENSIONS = {
 }
 
 # Keep batches small on Render Free.
-MAX_BULK_PRODUCTS = 5
+MAX_BULK_PRODUCTS = 50
 
 # Maximum Excel size: 2 MB.
 MAX_EXCEL_SIZE = 2 * 1024 * 1024
 
 # Maximum ZIP size: 10 MB.
-MAX_ZIP_SIZE = 10 * 1024 * 1024
+MAX_ZIP_SIZE = 100 * 1024 * 1024
 
 
 # ==========================================================
