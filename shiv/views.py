@@ -194,6 +194,104 @@ def get_orders_queryset():
         .prefetch_related("items")
         .order_by("-order_date")
     )
+    
+def has_role_permission(user, permission_name):
+    """
+    Check whether the logged-in user has a specific role permission.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    role = getattr(user, "role", None)
+
+    if role is None:
+        return False
+
+    if role.role_name == "Super Admin":
+        return True
+
+    return role.permissions.filter(
+        permission_name=permission_name
+    ).exists()
+
+from functools import wraps
+
+def role_permission_required(permission_name):
+    """
+    Protect admin pages using custom role permissions.
+    """
+
+    def decorator(view_function):
+
+        @wraps(view_function)
+        def wrapper(request, *args, **kwargs):
+
+            try:
+                if not request.user.is_authenticated:
+                    messages.error(
+                        request,
+                        "Please login to continue."
+                    )
+
+                    return redirect("login_user")
+
+                if not request.user.is_staff:
+                    messages.error(
+                        request,
+                        "You are not allowed to access the admin panel."
+                    )
+
+                    return redirect("home_page")
+
+                if not has_role_permission(
+                    request.user,
+                    permission_name
+                ):
+                    messages.error(
+                        request,
+                        "You do not have permission to access this page."
+                    )
+
+                    return redirect("admin_dashboard")
+
+                return view_function(
+                    request,
+                    *args,
+                    **kwargs
+                )
+
+            except Exception:
+                error_traceback = traceback.format_exc()
+
+                print(
+                    "ROLE PERMISSION DECORATOR ERROR",
+                    flush=True
+                )
+
+                print(
+                    f"Permission: {permission_name}",
+                    flush=True
+                )
+
+                print(
+                    f"User: {getattr(request.user, 'username', 'Unknown')}",
+                    flush=True
+                )
+
+                print(
+                    error_traceback,
+                    flush=True
+                )
+
+                raise
+
+        return wrapper
+
+    return decorator
 
 
 def get_admin_permissions_context(user):
