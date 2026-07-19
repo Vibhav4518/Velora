@@ -197,10 +197,6 @@ def get_orders_queryset():
 
 
 def get_admin_permissions_context(user):
-    """
-    Common sidebar permission context.
-    Add this context to admin pages where sidebar permission menu is used.
-    """
     return {
         "can_view_dashboard": has_role_permission(user, "Can View Dashboard"),
         "can_manage_admins": has_role_permission(user, "Can Manage Admins"),
@@ -209,9 +205,10 @@ def get_admin_permissions_context(user):
         "can_manage_categories": has_role_permission(user, "Can Manage Categories"),
         "can_manage_orders": has_role_permission(user, "Can Manage Orders"),
         "can_manage_customers": has_role_permission(user, "Can Manage Customers"),
-        "can_view_reports": has_role_permission(user, "Can View Reports"),
         "can_manage_payments": has_role_permission(user, "Can Manage Payments"),
-        "can_manage_blog": has_role_permission(user,"Can Manage Blog"),
+        "can_view_reports": has_role_permission(user, "Can View Reports"),
+        "can_manage_blog": has_role_permission(user, "Can Manage Blog"),
+        "can_manage_deals": has_role_permission(user, "Can Manage Deals"),
     }
     
 # ==========================================================
