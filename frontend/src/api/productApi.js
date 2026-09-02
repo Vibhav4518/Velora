@@ -7,4 +7,7 @@ export const productApi = {
   createProduct: (data) => api.post('/products/', data),
   updateProduct: (slug, data) => api.patch(`/products/${encodeURIComponent(slug)}/`, data),
   deleteProduct: (slug) => api.delete(`/products/${encodeURIComponent(slug)}/`),
+  bulkUpload: (formData) => api.post('/products/bulk-upload/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
