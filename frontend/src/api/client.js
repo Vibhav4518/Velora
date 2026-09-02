@@ -28,11 +28,14 @@ const getSessionKey = () => {
   return key;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
-  ? (import.meta.env.VITE_API_BASE_URL.endsWith('/api') 
-      ? import.meta.env.VITE_API_BASE_URL 
-      : `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')}/api`)
-  : 'https://velora-v0f2.onrender.com/api';
+let rawBase = import.meta.env.VITE_API_BASE_URL;
+if (!rawBase || typeof rawBase !== 'string' || !rawBase.trim().startsWith('http')) {
+  rawBase = 'https://velora-v0f2.onrender.com';
+}
+
+const API_BASE_URL = rawBase.trim().endsWith('/api') 
+  ? rawBase.trim() 
+  : `${rawBase.trim().replace(/\/$/, '')}/api`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
