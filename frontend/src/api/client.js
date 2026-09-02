@@ -32,7 +32,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   ? (import.meta.env.VITE_API_BASE_URL.endsWith('/api') 
       ? import.meta.env.VITE_API_BASE_URL 
       : `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')}/api`)
-  : '/api';
+  : 'https://velora-v0f2.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -63,7 +63,7 @@ api.interceptors.response.use(
       const isPersistent = !!localStorage.getItem('velora_refresh_token');
       if (refreshToken) {
         try {
-          const res = await axios.post('/api/auth/refresh/', { refresh: refreshToken });
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh/`, { refresh: refreshToken });
           if (res.data && res.data.access) {
             setToken('velora_access_token', res.data.access, isPersistent);
             originalRequest.headers.Authorization = `Bearer ${res.data.access}`;
