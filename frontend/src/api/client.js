@@ -29,7 +29,7 @@ const getSessionKey = () => {
 };
 
 let rawBase = import.meta.env.VITE_API_BASE_URL;
-if (!rawBase || typeof rawBase !== 'string' || !rawBase.trim().startsWith('http')) {
+if (!rawBase || typeof rawBase !== 'string' || !rawBase.trim().startsWith('http') || rawBase.includes('velora-backend.onrender.com')) {
   rawBase = 'https://velora-v0f2.onrender.com';
 }
 
