@@ -23,7 +23,7 @@ export const ShopPage = () => {
   const brandFilter = searchParams.get('brand') || '';
   const minPrice = searchParams.get('min_price') || '';
   const maxPrice = searchParams.get('max_price') || '';
-  const sortFilter = searchParams.get('sort') || 'newest';
+  const sortFilter = searchParams.get('sort') || 'random';
   const searchQuery = searchParams.get('search') || '';
   const currentPage = Number(searchParams.get('page')) || 1;
 
@@ -199,6 +199,7 @@ export const ShopPage = () => {
                 onChange={(e) => updateParam('sort', e.target.value)}
                 className="bg-gray-50 text-sm font-semibold text-gray-900 rounded-xl px-3 py-1.5 border border-gray-200 outline-none focus:border-emerald-600"
               >
+                <option value="random">Random Discover</option>
                 <option value="newest">Newest Arrivals</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>

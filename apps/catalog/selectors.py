@@ -46,6 +46,8 @@ def get_product_list(category_slug=None, brand_slug=None, min_price=None, max_pr
         queryset = queryset.order_by('-rating')
     elif sort == 'popularity':
         queryset = queryset.order_by('-review_count')
+    elif sort == 'random':
+        queryset = queryset.order_by('?')
     else:
         queryset = queryset.order_by('-created_at')
 
