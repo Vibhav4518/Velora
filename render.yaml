@@ -20,8 +20,9 @@ services:
           property: connectionString
 
   # React Frontend Static Site
-  - type: static
+  - type: web
     name: velora-frontend
+    runtime: static
     buildCommand: "cd frontend && npm install && npm run build"
     staticPublishPath: ./frontend/dist
     routes:
