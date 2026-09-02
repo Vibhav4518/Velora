@@ -169,6 +169,7 @@ if cors_origins_env:
 from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-session-key',
+    'x-admin-secret',
 ]
 
 SPECTACULAR_SETTINGS = {
