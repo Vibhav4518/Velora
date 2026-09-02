@@ -1,0 +1,148 @@
+# VELORA - Production-Ready Full-Stack E-Commerce Platform
+
+VELORA is a luxury, full-stack, dynamic e-commerce platform built from scratch with a **Django REST Framework** backend, **PostgreSQL** database, and a high-performance **React.js (Vite)** Single Page Application (SPA) frontend styled with **Tailwind CSS**.
+
+---
+
+## 🌟 Key Features
+
+- **Dynamic Single Page Application (SPA)**: Zero page reloads for all CRUD operations (cart updates, wishlist toggles, checkout, profile edits, admin CRUD).
+- **Authentication & RBAC System**: JWT access and refresh token rotation, custom user model, and granular Role-Based Access Control (`SUPER_ADMIN`, `ADMIN`, `STAFF`, `CUSTOMER`).
+- **Product Catalog & Management**: URL-based image handling, multi-image galleries, real-time search, multi-criteria filtering (category, brand, price, rating, stock status), sorting, and pagination.
+- **Cart & Wishlist Engine**: Session-based guest cart merging into user cart upon login, inventory stock limit enforcement, subtotal, shipping, and tax calculations.
+- **Checkout & Payment Architecture**: Abstraction layer with mock payment gateway, coupon validation (`PERCENTAGE`, `FIXED`), and address management.
+- **Order & Invoice System**: Order status timeline tracking (`PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`, `REFUNDED`), inventory auto-reduction & restoration, and printable/downloadable invoices.
+- **Product Reviews & Ratings**: Dynamic rating recalculation, verified purchase indicators, and admin moderation.
+- **Admin Dashboard**: Real-time business analytics, low-stock warnings, user & role management, coupon manager, review moderator, and security audit log trail.
+- **Global Toast Notification System**: Real-time feedback for every action (success, error, warning, info) positioned at top-right.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Backend**: Python 3.12, Django 5+, Django REST Framework, SimpleJWT, dj-database-url, Pillow, django-filter, drf-spectacular, pytest, pytest-django.
+- **Database**: PostgreSQL (`velora_db`).
+- **Frontend**: React 18, Vite, Tailwind CSS v4, React Router v7, Axios, Lucide Icons, Context API.
+
+---
+
+## 📁 Repository Architecture
+
+```
+velora/
+├── backend/
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── pytest.ini
+│   ├── .env.example
+│   ├── .env
+│   ├── config/
+│   │   ├── settings/
+│   │   │   ├── __init__.py
+│   │   │   └── base.py
+│   │   ├── urls.py
+│   │   ├── asgi.py
+│   │   └── wsgi.py
+│   ├── apps/
+│   │   ├── accounts/       # Auth API, custom exception handlers, pagination
+│   │   ├── users/          # Custom User model, RBAC Roles & Permissions
+│   │   ├── catalog/        # Products, ProductImages, search & seed command
+│   │   ├── categories/     # Categories & Subcategories
+│   │   ├── brands/         # Brand partners
+│   │   ├── cart/           # Shopping cart service & items
+│   │   ├── wishlist/       # Customer wishlist & move-to-cart
+│   │   ├── orders/         # Checkout & Order processing engine
+│   │   ├── payments/       # Payment gateway abstraction
+│   │   ├── shipping/       # Address book manager
+│   │   ├── coupons/        # Discount coupon validator & engine
+│   │   ├── reviews/        # Ratings & reviews with moderation
+│   │   ├── inventory/      # Atomic stock tracking & logs
+│   │   ├── invoices/       # Store invoices & print templates
+│   │   ├── notifications/  # User notification system
+│   │   ├── dashboard/      # Admin analytics REST endpoints
+│   │   ├── audit/          # Security & administrative audit logs
+│   │   └── support/        # Contact & support tickets
+│   └── tests/              # Pytest test suite
+│
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── index.html
+│   └── src/
+│       ├── api/            # Reusable Axios API client modules
+│       ├── components/     # Reusable UI components & modals
+│       ├── context/        # AuthContext, CartContext, WishlistContext, ToastContext
+│       ├── layouts/        # PublicLayout, CustomerLayout, AdminLayout
+│       ├── pages/          # Storefront, Checkout, Profile, and Admin pages
+│       └── routes/         # React Router configuration
+└── README.md
+```
+
+---
+
+## 🚀 Quickstart Guide
+
+### 1. Database Setup (PostgreSQL)
+
+Ensure PostgreSQL is running locally on port `5432`:
+
+```sql
+CREATE DATABASE velora_db;
+CREATE USER postgres WITH PASSWORD 'postgres';
+GRANT ALL PRIVILEGES ON DATABASE velora_db TO postgres;
+```
+
+### 2. Backend Setup & Seed Data
+
+Navigate to `backend/` or root directory:
+
+```bash
+# Apply migrations to PostgreSQL
+python backend/manage.py migrate
+
+# Seed database with sample categories, brands, products, coupons, and test accounts
+python backend/manage.py seed_data
+
+# Run Django backend server (runs on http://127.0.0.1:8000)
+python backend/manage.py runserver
+```
+
+#### 🔑 Test Account Credentials (Generated by `seed_data`):
+
+| Role | Email | Password | Access Level |
+|---|---|---|---|
+| **Super Admin** | `admin@velora.com` | `Admin123!` | Full System & Audit Log Access |
+| **Staff** | `staff@velora.com` | `Staff123!` | Catalog & Order Management |
+| **Customer** | `customer@velora.com` | `Customer123!` | Customer Storefront & Checkout |
+
+---
+
+### 3. Frontend Setup
+
+Navigate to `frontend/`:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+---
+
+## 🧪 Running Automated Tests
+
+### Backend Tests (Pytest)
+
+Run full test suite covering Auth, Catalog, Cart, Orders, and RBAC:
+
+```bash
+python -m pytest backend/tests
+```
+
+### OpenAPI / Swagger API Documentation
+
+When the Django backend is running, view interactive API docs at:
+- **Swagger UI**: `http://127.0.0.1:8000/api/docs/`
+- **ReDoc**: `http://127.0.0.1:8000/api/redoc/`
