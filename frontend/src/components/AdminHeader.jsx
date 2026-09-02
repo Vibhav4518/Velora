@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export const AdminHeader = ({ title, subtitle }) => {
   return (
@@ -10,6 +11,9 @@ export const AdminHeader = ({ title, subtitle }) => {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Notification Bell Dropdown for Admin */}
+        <NotificationDropdown />
+
         <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 px-3.5 py-1.5 rounded-full border border-emerald-200 text-xs font-bold">
           <Shield className="w-4 h-4 text-emerald-600" />
           <span>RBAC Enforced</span>

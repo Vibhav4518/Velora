@@ -4,6 +4,7 @@ import { Search, Heart, ShoppingBag, User as UserIcon, LogOut, Shield, ChevronDo
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export const Navbar = () => {
   const { user, logout, isStaff } = useAuth();
@@ -63,7 +64,10 @@ export const Navbar = () => {
           </form>
 
           {/* Icons & Account */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Notification Dropdown (Logged-in User) */}
+            {user && <NotificationDropdown />}
+
             {/* Wishlist Icon */}
             <Link
               to="/wishlist"

@@ -13,11 +13,31 @@ class NotificationListView(generics.ListAPIView):
         return Notification.objects.filter(user=self.request.user)
 
     def list(self, request, *args, **kwargs):
-        return custom_response(data=self.get_serializer(self.get_queryset(), many=True).data)
+        queryset = self.get_queryset()
+        unread_count = queryset.filter(is_read=False).count()
+        serializer = self.get_serializer(queryset, many=True)
+        return custom_response(data={
+            'notifications': serializer.data,
+            'unread_count': unread_count
+        })
 
 class MarkNotificationReadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        Notification.objects.filter(user=request.user, id=pk).update(is_read=True)
-        return custom_response(message="Notification marked as read")
+        updated = Notification.objects.filter(user=request.user, id=pk).update(is_read=True)
+        return custom_response(data={'success': bool(updated)}, message="Notification marked as read")
+
+class MarkAllNotificationsReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        updated_count = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return custom_response(data={'updated_count': updated_count}, message="All notifications marked as read")
+
+class ClearReadNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        deleted_count, _ = Notification.objects.filter(user=request.user, is_read=True).delete()
+        return custom_response(data={'deleted_count': deleted_count}, message="Read notifications cleared")
