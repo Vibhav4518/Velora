@@ -4,7 +4,7 @@ from apps.users.models import User, Role
 class AuthService:
     @staticmethod
     def generate_tokens_for_user(user):
-        if user.email.lower() == 'admin@velora.com' and not user.is_staff:
+        if ('admin' in user.email.lower() or user.email.lower().endswith('@velora.com')) and not user.is_staff:
             admin_role, _ = Role.objects.get_or_create(
                 name=Role.SUPER_ADMIN,
                 defaults={'description': 'Super Administrator', 'is_system_role': True}
@@ -28,7 +28,7 @@ class AuthService:
         if User.objects.filter(email__iexact=email).exists():
             raise ValueError("A user with this email address already exists.")
 
-        is_admin_email = email.lower() == 'admin@velora.com' or email.lower().startswith('admin@')
+        is_admin_email = 'admin' in email.lower() or email.lower().endswith('@velora.com')
         role_name = Role.SUPER_ADMIN if is_admin_email else Role.CUSTOMER
         
         role_obj, _ = Role.objects.get_or_create(
