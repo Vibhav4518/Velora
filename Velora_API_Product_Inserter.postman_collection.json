@@ -1,0 +1,147 @@
+{
+	"info": {
+		"_postman_id": "velora-prod-inserter-001",
+		"name": "Velora E-Commerce Product Inserter",
+		"description": "Collection for inserting Categories, Brands, and Products via API into Velora Backend on Render.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Admin Login (Get Bearer Token)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"admin@velora.com\",\n  \"password\": \"Admin123!\"\n}"
+				},
+				"url": {
+					"raw": "https://velora-v0f2.onrender.com/api/auth/login/",
+					"protocol": "https",
+					"host": [
+						"velora-v0f2",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Create Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Electronics\",\n  \"slug\": \"electronics\",\n  \"description\": \"Smart devices, audio gear, and personal tech.\"\n}"
+				},
+				"url": {
+					"raw": "https://velora-v0f2.onrender.com/api/categories/",
+					"protocol": "https",
+					"host": [
+						"velora-v0f2",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"categories",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Create Brand",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Velora Signature\",\n  \"slug\": \"velora-signature\",\n  \"description\": \"Flagship luxury design and acoustic precision.\"\n}"
+				},
+				"url": {
+					"raw": "https://velora-v0f2.onrender.com/api/brands/",
+					"protocol": "https",
+					"host": [
+						"velora-v0f2",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"brands",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Create Product (Sample 1 - Headphones)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Velora Wireless ANC Headphones\",\n  \"sku\": \"VEL-ANC-001\",\n  \"category\": 1,\n  \"brand\": 1,\n  \"price\": \"299.99\",\n  \"cost_price\": \"150.00\",\n  \"stock_quantity\": 50,\n  \"description\": \"Active noise cancelling wireless headphones with 40h battery life.\",\n  \"image_url\": \"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80\",\n  \"is_featured\": true,\n  \"is_active\": true\n}"
+				},
+				"url": {
+					"raw": "https://velora-v0f2.onrender.com/api/products/",
+					"protocol": "https",
+					"host": [
+						"velora-v0f2",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"products",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
