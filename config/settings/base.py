@@ -162,6 +162,15 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if cors_origins_env:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
+
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-session-key',
+]
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'VELORA E-Commerce API',
     'DESCRIPTION': 'Production-ready REST API for VELORA E-Commerce platform.',
