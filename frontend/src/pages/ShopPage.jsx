@@ -50,13 +50,14 @@ export const ShopPage = () => {
         const params = {
           page: currentPage,
           page_size: 12,
-          category: categoryFilter,
-          brand: brandFilter,
-          min_price: minPrice,
-          max_price: maxPrice,
-          sort: sortFilter,
-          search: searchQuery,
         };
+        if (categoryFilter) params.category = categoryFilter;
+        if (brandFilter) params.brand = brandFilter;
+        if (minPrice) params.min_price = minPrice;
+        if (maxPrice) params.max_price = maxPrice;
+        if (sortFilter) params.sort = sortFilter;
+        if (searchQuery) params.search = searchQuery;
+
         const res = await productApi.getProducts(params);
         const data = res.data.data;
         setProducts(data.results || []);
